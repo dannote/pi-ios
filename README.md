@@ -53,16 +53,25 @@ pi-terminal/
 └── PLAN.md                 # Detailed implementation plan
 ```
 
-## Dependencies (not included)
+## Setup
 
-These are referenced as external builds, not git submodules:
+```bash
+git clone git@github.com:dannote/pi-terminal.git
+cd pi-terminal
+scripts/setup.sh          # clones Ghostty + WebKit into vendor/, applies patches
+scripts/build-jsc-ios.sh  # builds JSC for iOS Simulator (~5 min)
+```
 
-| Dependency | What | How to get |
-|------------|------|------------|
-| [ghostty-org/ghostty](https://github.com/ghostty-org/ghostty) | Terminal library | Apply `poc/webkit-patches/ghostty-ios-manual-backend.patch`, build with `zig build` for ios |
-| [oven-sh/WebKit](https://github.com/oven-sh/WebKit) | JavaScriptCore | Apply `poc/webkit-patches/ios-build-fixes.patch`, use `scripts/build-jsc-ios.sh` |
-| [badlogic/pi-mono](https://github.com/badlogic/pi-mono) | Pi coding agent | npm package, bundled at build time |
-| [vercel-labs/just-bash](https://github.com/vercel-labs/just-bash) | Virtual bash | npm package, bundled at build time |
+The setup script pins exact commits and applies iOS patches automatically.
+
+## Dependencies
+
+| Dependency | Managed by | Pinned in |
+|------------|-----------|-----------|
+| [ghostty-org/ghostty](https://github.com/ghostty-org/ghostty) | `scripts/setup.sh` → `vendor/ghostty/` | `setup.sh` |
+| [oven-sh/WebKit](https://github.com/oven-sh/WebKit) | `scripts/setup.sh` → `vendor/WebKit/` (sparse) | `setup.sh` |
+| [badlogic/pi-mono](https://github.com/badlogic/pi-mono) | npm (future) | `package.json` |
+| [vercel-labs/just-bash](https://github.com/vercel-labs/just-bash) | npm (future) | `package.json` |
 
 ## App Store viability
 

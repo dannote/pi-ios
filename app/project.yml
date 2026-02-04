@@ -21,13 +21,13 @@ targets:
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGNING_ALLOWED: "NO"
         SWIFT_INCLUDE_PATHS:
-          - "$(PROJECT_DIR)/../ghostty-ios/macos/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
+          - "$(PROJECT_DIR)/../vendor/ghostty/macos/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
         HEADER_SEARCH_PATHS:
           - "$(inherited)"
-          - "$(PROJECT_DIR)/../ghostty-ios/macos/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
+          - "$(PROJECT_DIR)/../vendor/ghostty/macos/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
         LIBRARY_SEARCH_PATHS:
           - "$(inherited)"
-          - "$(PROJECT_DIR)/../ghostty-ios/macos/GhosttyKit.xcframework/ios-arm64-simulator"
+          - "$(PROJECT_DIR)/../vendor/ghostty/macos/GhosttyKit.xcframework/ios-arm64-simulator"
         OTHER_LDFLAGS:
           - "-lghostty-fat"
           - "-lc++"

@@ -10,7 +10,7 @@ set -euo pipefail
 #   - CMake 3.28+
 #   - oven-sh/WebKit cloned at $WEBKIT_SRC (or ../WebKit)
 
-WEBKIT_SRC="${WEBKIT_SRC:-$(cd "$(dirname "$0")/../../WebKit" && pwd)}"
+WEBKIT_SRC="${WEBKIT_SRC:-$(cd "$(dirname "$0")/../vendor/WebKit" && pwd)}"
 BUILD_DIR="$(cd "$(dirname "$0")/.." && pwd)/build"
 PLATFORM="${1:-iphonesimulator}"
 ARCH="${2:-arm64}"
