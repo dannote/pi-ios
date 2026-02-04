@@ -1,0 +1,43 @@
+name: GhosttyTerminal
+options:
+  bundleIdPrefix: dev.ghostty
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "26.0"
+
+targets:
+  GhosttyTerminal:
+    type: application
+    platform: iOS
+    sources:
+      - path: GhosttyTerminal
+        excludes:
+          - BridgingHeader.h
+    settings:
+      base:
+        INFOPLIST_FILE: GhosttyTerminal/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: dev.ghostty.terminal
+        SWIFT_VERSION: "6.0"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_ALLOWED: "NO"
+        SWIFT_INCLUDE_PATHS:
+          - "$(PROJECT_DIR)/../ghostty-ios/macos/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
+        HEADER_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/../ghostty-ios/macos/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
+        LIBRARY_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(PROJECT_DIR)/../ghostty-ios/macos/GhosttyKit.xcframework/ios-arm64-simulator"
+        OTHER_LDFLAGS:
+          - "-lghostty-fat"
+          - "-lc++"
+          - "-lobjc"
+          - "-framework Metal"
+          - "-framework CoreText"
+          - "-framework CoreGraphics"
+          - "-framework CoreFoundation"
+          - "-framework Foundation"
+          - "-framework QuartzCore"
+          - "-framework IOSurface"
+          - "-framework CoreVideo"
+          - "-framework UIKit"

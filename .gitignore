@@ -1,0 +1,11 @@
+build/
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+*.o
+*.a
+*.app
+*.ipa
+*.tar.gz
+.DS_Store
+node_modules/

@@ -1,0 +1,62 @@
+diff --git a/Source/JavaScriptCore/assembler/FastJITPermissions.h b/Source/JavaScriptCore/assembler/FastJITPermissions.h
+index 4e4067d0..f0c43c8d 100644
+--- a/Source/JavaScriptCore/assembler/FastJITPermissions.h
++++ b/Source/JavaScriptCore/assembler/FastJITPermissions.h
+@@ -26,6 +26,7 @@
+ #pragma once
+ 
+ #include <stdint.h>
++#include <TargetConditionals.h>
+ #include <wtf/Platform.h>
+ 
+ enum class MemoryRestriction {
+@@ -94,7 +95,7 @@ static ALWAYS_INLINE void threadSelfRestrict()
+         RELEASE_ASSERT_NOT_REACHED();
+ }
+ 
+-#elif CPU(ARM64)
++#elif CPU(ARM64) && !TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR
+ #include <pthread.h>
+ 
+ template <MemoryRestriction restriction>
+diff --git a/Source/JavaScriptCore/domjit/DOMJITEffect.h b/Source/JavaScriptCore/domjit/DOMJITEffect.h
+index 6ba85116..2d9cc277 100644
+--- a/Source/JavaScriptCore/domjit/DOMJITEffect.h
++++ b/Source/JavaScriptCore/domjit/DOMJITEffect.h
+@@ -25,9 +25,16 @@
+ 
+ #pragma once
+ 
+-#include "DFGAbstractHeap.h"
+ #include "DOMJITHeapRange.h"
+ 
++#if ENABLE(DFG_JIT)
++#include "DFGAbstractHeap.h"
++#else
++namespace JSC { namespace DFG {
++enum AbstractHeapKind : uint8_t { InvalidAbstractHeap = 0, Heap = 1 };
++} }
++#endif
++
+ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+ 
+ namespace JSC {
+diff --git a/Source/WTF/wtf/posix/OSAllocatorPOSIX.cpp b/Source/WTF/wtf/posix/OSAllocatorPOSIX.cpp
+index c21cd8ea..03c8f044 100644
+--- a/Source/WTF/wtf/posix/OSAllocatorPOSIX.cpp
++++ b/Source/WTF/wtf/posix/OSAllocatorPOSIX.cpp
+@@ -56,10 +56,13 @@
+ #if OS(DARWIN)
+ 
+ #include <mach/mach.h>
+-#include <mach/mach_vm.h>
+ #include <mach/task.h>
+ 
++#include <TargetConditionals.h>
++#if !TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR
++#include <mach/mach_vm.h>
+ #define BUN_MACOSX 1
++#endif
+ 
+ #endif
+ 
