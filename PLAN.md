@@ -299,3 +299,17 @@ PiTerminal/
 │   └── BunJSC.xcframework/           # JSC static libs + headers
 └── project.yml                        # XcodeGen
 ```
+
+
+## Progress Log
+
+### Session 2 (Feb 2026)
+- Created dannote/pi-terminal repo consolidating all work  
+- Added .ios to Bun's OperatingSystem enum
+- Added isDarwin (= isMac || isIOS) comptime bool  
+- Replaced 116 Environment.isMac → Environment.isDarwin across 45 Zig files
+- Updated build.zig to accept aarch64-ios target
+- Created iOS cmake toolchain
+- Generated cmake source lists
+- cmake configure running (downloading Bun's WebKit ~2.3GB)
+
