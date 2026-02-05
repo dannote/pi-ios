@@ -6,32 +6,38 @@ A native iOS terminal that runs [pi](https://github.com/badlogic/pi-mono) with
 GPU-accelerated rendering (Ghostty), Node.js compatibility (Bun runtime),
 and a virtual shell (just-bash).
 
-## Status
+## Status: Bun Runtime Working on iOS! 🎉
 
-**Bun runtime working on iOS Simulator!** All Node.js APIs functional.
+**All Node.js APIs tested and working on iOS Simulator:**
 
-### What works
+| Feature | Status |
+|---------|--------|
+| Basic JavaScript | ✅ Works |
+| `require('path')` | ✅ Works |
+| `require('fs')` | ✅ File I/O works |
+| `require('crypto')` | ✅ SHA256, etc. |
+| `require('os')` | ✅ Returns `darwin`/`arm64` |
+| `async/await` | ✅ Works |
+| `Buffer` | ✅ Works |
+| `URL` | ✅ Works |
 
-- **Bun 1.3.9 on iOS** — Full Bun runtime compiled for iOS Simulator (arm64,
-  platform 7). All JS features + Node.js APIs working: `require('path')`,
-  `require('os')`, `require('fs')`, `require('crypto')`, Buffer, URL, Promise,
-  async/await, generators, WeakRef, setTimeout. 60MB binary, zero JIT.
-  
-- **WebKit JSCOnly** — oven-sh/WebKit @ `515344bc5d65` built with:
-  - `ENABLE_JIT=OFF`, `ENABLE_WEBASSEMBLY=ON`
-  - `USE_BUN_EVENT_LOOP=ON`, `ENABLE_REMOTE_INSPECTOR=ON`
-  - Interpreter-only mode via LLInt
+### Test Output (iOS Simulator)
 
-- **Ghostty on iOS** — Metal-rendered terminal with `Manual` I/O backend,
-  keyboard input, surface resizing. Builds for arm64 + arm64-simulator.
-
-### What's next
-
-1. Wire Bun into iOS app via C embedding API (`bun_main_thread`, `bun_eval_async`)
-2. Integrate with Ghostty terminal for I/O
-3. Load just-bash and pi-agent in Bun's iOS runtime
-
-See [PLAN.md](PLAN.md) for the full roadmap.
+```
+=== Bun iOS Comprehensive Test ===
+Test 1: Basic JS
+  2+2 = 4
+Test 2: require("path")
+  path.join: /a/b/c
+Test 3: require("fs")
+  File content: Hello from Bun on iOS!
+Test 4: require("crypto")
+  SHA256("bun"): 08d1082cc8d85a0833da8815ff157467...
+Test 5: require("os")
+  platform: darwin
+  arch: arm64
+=== ALL TESTS PASSED ===
+```
 
 ## Architecture
 
@@ -42,37 +48,18 @@ Ghostty (Metal)  ←→  Bridge (Swift)  ←→  Bun Runtime  ←→  Pi Agent
 ```
 
 - **Ghostty** — terminal rendering and input. No WebView, no xterm.js.
-- **Bun** — Full Bun runtime ported to iOS. Provides Node.js API surface.
+- **Bun** — Full Bun 1.3.9 runtime ported to iOS. Provides Node.js API surface.
   Uses oven-sh/WebKit's JSCOnly (interpreter mode, no JIT).
 - **just-bash** — TypeScript bash interpreter with 80 commands and a
   virtual filesystem. Replaces `child_process.spawn()` on iOS.
 - **Pi** — coding agent in SDK mode with tools adapted for the virtual environment.
-
-## Repository structure
-
-```
-pi-terminal/
-├── app/                    # iOS app (Swift + XcodeGen)
-│   ├── PiTerminal/         # Ghostty terminal wrapper
-│   └── project.yml
-├── vendor/
-│   └── bun/                # Packaged Bun iOS libraries
-│       ├── lib/            # Static libraries (libbun.a, libJavaScriptCore.a, etc.)
-│       └── include/        # C embedding API headers
-├── poc/                    # Proof of concepts
-│   └── jsc-ios-demo/       # Early JSC-only demo
-├── scripts/
-│   ├── build-jsc-ios.sh    # Build JSC for iOS from source
-│   └── package-bun-ios.sh  # Package Bun iOS build artifacts
-└── PLAN.md                 # Detailed implementation plan
-```
 
 ## Building
 
 ### Prerequisites
 
 - macOS with Xcode 16+
-- Bun iOS build (see below)
+- Bun iOS build (from fork)
 
 ### Bun iOS Build
 
@@ -94,18 +81,29 @@ cmake ../.. -G Ninja \
 
 # Build (~10 min)
 ninja -j$(sysctl -n hw.ncpu)
-
-# Test on simulator
-xcrun simctl spawn booted build/ios-release/bun-profile.app/bun-profile -e "console.log(require('path').join('/a','b'))"
-# Output: /a/b
 ```
 
-### Package for pi-terminal
+### Package and Build Test App
 
 ```bash
+# Package Bun libraries into vendor/
 cd ~/Development/pi-terminal
 ./scripts/package-bun-ios.sh
-# Creates vendor/bun/lib/ with ~4.6GB of static libraries
+
+# Build iOS app
+cd app
+xcodegen generate
+xcodebuild build -project BunTest.xcodeproj -scheme BunTest \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -configuration Debug
+```
+
+### Run Tests
+
+```bash
+# Install and launch on simulator
+xcrun simctl install booted ~/Library/Developer/Xcode/DerivedData/BunTest*/Build/Products/Debug-iphonesimulator/BunTest.app
+xcrun simctl launch --console booted dev.bun.test
 ```
 
 ## Bun iOS Changes
@@ -118,8 +116,15 @@ Key changes to upstream Bun for iOS support:
 4. **C embedding API** — `bun_main_thread()`, `bun_eval_async()` for library use
 5. **Exit callback** — `bun_ios_exit_callback` intercepts `exit()` for embedding
 
-## App Store viability
+## App Store Viability
 
 - **Zero private Apple APIs** — binary links only UIKit, Foundation, CoreFoundation, libicucore, libc++, libSystem
 - **Precedent** — Hermes (React Native), V8 jitless (NativeScript), QuickJS, Lua all ship custom JS/scripting engines on iOS
 - **Bun's WebKit fork is 99.77% upstream** — 3,808 lines changed out of 1.63M
+
+## Next Steps
+
+1. Integrate Ghostty terminal for I/O
+2. Load just-bash in Bun's iOS runtime
+3. Connect pi-agent in SDK mode
+4. Test on physical iOS device

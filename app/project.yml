@@ -1,37 +1,61 @@
-name: GhosttyTerminal
+name: BunTest
 options:
-  bundleIdPrefix: dev.ghostty
+  bundleIdPrefix: dev.bun
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "26.0"
 
 targets:
-  GhosttyTerminal:
+  BunTest:
     type: application
     platform: iOS
     sources:
-      - path: GhosttyTerminal
+      - path: PiTerminal/BunTest
         excludes:
           - BridgingHeader.h
     settings:
       base:
-        INFOPLIST_FILE: GhosttyTerminal/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: dev.ghostty.terminal
+        INFOPLIST_FILE: PiTerminal/BunTest/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: dev.bun.test
         SWIFT_VERSION: "6.0"
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGNING_ALLOWED: "NO"
-        SWIFT_INCLUDE_PATHS:
-          - "$(PROJECT_DIR)/../vendor/ghostty/macos/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
+        SWIFT_OBJC_BRIDGING_HEADER: PiTerminal/BunTest/BridgingHeader.h
         HEADER_SEARCH_PATHS:
           - "$(inherited)"
-          - "$(PROJECT_DIR)/../vendor/ghostty/macos/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
+          - "$(PROJECT_DIR)/../vendor/bun/include"
         LIBRARY_SEARCH_PATHS:
           - "$(inherited)"
-          - "$(PROJECT_DIR)/../vendor/ghostty/macos/GhosttyKit.xcframework/ios-arm64-simulator"
+          - "$(PROJECT_DIR)/../vendor/bun/lib"
         OTHER_LDFLAGS:
-          - "-lghostty-fat"
+          # Bun static libraries
+          - "-lbun"
+          - "-lJavaScriptCore"
+          - "-lWTF"
+          - "-lbmalloc"
+          - "-lcrypto"
+          - "-lssl"
+          - "-ldecrepit"
+          - "-lbrotlicommon"
+          - "-lbrotlidec"
+          - "-lbrotlienc"
+          - "-lcares"
+          - "-lhwy"
+          - "-ldeflate"
+          - "-llolhtml"
+          - "-lls-hpack"
+          - "-lz"
+          - "-larchive"
+          - "-lhdr_histogram_static"
+          - "-lzstd"
+          # mimalloc object file
+          - "$(PROJECT_DIR)/../vendor/bun/lib/mimalloc.o"
+          # System libraries
+          - "-licucore"
+          - "-lresolv"
           - "-lc++"
           - "-lobjc"
+          # Frameworks
           - "-framework Metal"
           - "-framework CoreText"
           - "-framework CoreGraphics"
@@ -41,3 +65,4 @@ targets:
           - "-framework IOSurface"
           - "-framework CoreVideo"
           - "-framework UIKit"
+          - "-framework Security"
