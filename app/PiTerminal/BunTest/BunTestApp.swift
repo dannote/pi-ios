@@ -1,84 +1,89 @@
 import SwiftUI
+import os.log
 
-nonisolated(unsafe) private var testSemaphore: DispatchSemaphore?
+private let log = OSLog(subsystem: "dev.bun.test", category: "BunTest")
 
-private func testExitHandler(exitCode: UInt32) {
-    print("=== All tests passed! Exit code: \(exitCode) ===")
+nonisolated(unsafe) private var exitHandler: ((UInt32) -> Void)?
+
+private func bunExitCallback(code: UInt32) {
+    os_log("Bun exit callback: %d", log: log, type: .default, code)
+    exitHandler?(code)
 }
 
 @main
 struct BunTestApp: App {
     init() {
+        os_log("BunTestApp init", log: log, type: .default)
+        
         DispatchQueue.global().asyncAfter(deadline: .now() + 1) {
-            runBunTests()
+            testWithPipes()
         }
     }
     
     var body: some Scene {
         WindowGroup {
-            BunTestView()
+            Text("BunTest")
         }
     }
 }
 
-private func runBunTests() {
-    print("=== Bun iOS Comprehensive Test ===")
+private func testWithPipes() {
+    os_log("Testing bun_main_with_io", log: log, type: .default)
     
-    let code = """
-    // Test 1: Basic JavaScript
-    console.log('Test 1: Basic JS');
-    console.log('  2+2 =', 2+2);
-    console.log('  typeof undefined:', typeof undefined);
+    // Create pipes
+    var stdoutPipe: [Int32] = [0, 0]
+    guard pipe(&stdoutPipe) == 0 else {
+        os_log("Failed to create stdout pipe", log: log, type: .error)
+        return
+    }
     
-    // Test 2: require('path')
-    console.log('Test 2: require("path")');
-    const path = require('path');
-    console.log('  path.join:', path.join('/a', 'b', 'c'));
-    console.log('  path.dirname:', path.dirname('/foo/bar/baz.txt'));
+    os_log("Created pipe: read=%d, write=%d", log: log, type: .default, stdoutPipe[0], stdoutPipe[1])
     
-    // Test 3: require('fs')
-    console.log('Test 3: require("fs")');
-    const fs = require('fs');
-    fs.writeFileSync('/tmp/bun-test.txt', 'Hello from Bun on iOS!');
-    const content = fs.readFileSync('/tmp/bun-test.txt', 'utf8');
-    console.log('  File content:', content);
-    fs.unlinkSync('/tmp/bun-test.txt');
-    console.log('  File deleted');
+    // Start reading thread
+    let readFd = stdoutPipe[0]
+    Thread {
+        os_log("Read thread started", log: log, type: .default)
+        var buffer = [CChar](repeating: 0, count: 1024)
+        while true {
+            let n = read(readFd, &buffer, buffer.count - 1)
+            if n > 0 {
+                buffer[Int(n)] = 0
+                let str = String(cString: buffer)
+                os_log("Read from pipe: %{public}@", log: log, type: .default, str)
+            } else if n == 0 {
+                os_log("Pipe EOF", log: log, type: .default)
+                break
+            } else {
+                os_log("Pipe read error: %d", log: log, type: .error, errno)
+                break
+            }
+        }
+    }.start()
     
-    // Test 4: require('crypto')
-    console.log('Test 4: require("crypto")');
-    const crypto = require('crypto');
-    const hash = crypto.createHash('sha256').update('bun').digest('hex');
-    console.log('  SHA256("bun"):', hash.slice(0, 32) + '...');
+    exitHandler = { code in
+        os_log("Exit handler: %d", log: log, type: .default, code)
+    }
     
-    // Test 5: require('os')
-    console.log('Test 5: require("os")');
-    const os = require('os');
-    console.log('  platform:', os.platform());
-    console.log('  arch:', os.arch());
-    console.log('  tmpdir:', os.tmpdir());
+    // Prepare args
+    var args = ["/tmp", "-e", "console.log('Hello from pipe!')"]
+    var cArgs: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) }
+    cArgs.append(nil)
     
-    // Test 6: Async/await
-    console.log('Test 6: Async/await');
-    (async () => {
-        const result = await Promise.resolve('async works!');
-        console.log('  Promise result:', result);
-    })();
+    let result = cArgs.withUnsafeMutableBufferPointer { buf in
+        bun_main_with_io(
+            Int32(args.count),
+            buf.baseAddress!,
+            -2,              // keep stdin
+            stdoutPipe[1],   // redirect stdout to pipe
+            -1,              // stderr same as stdout
+            bunExitCallback
+        )
+    }
     
-    // Test 7: Buffer
-    console.log('Test 7: Buffer');
-    const buf = Buffer.from('hello', 'utf8');
-    console.log('  Buffer hex:', buf.toString('hex'));
+    cArgs.dropLast().forEach { free($0) }
     
-    // Test 8: URL
-    console.log('Test 8: URL');
-    const url = new URL('https://example.com/path?query=1');
-    console.log('  hostname:', url.hostname);
-    console.log('  pathname:', url.pathname);
+    os_log("bun_main_with_io returned: %d", log: log, type: .default, result)
     
-    console.log('\\n=== ALL TESTS PASSED ===');
-    """
-    
-    let result = bun_eval_async("/tmp", code, testExitHandler)
-    print("bun_eval_async returned: \(result)")
+    // Close write end in main process (Bun has it now)
+    close(stdoutPipe[1])
 }
