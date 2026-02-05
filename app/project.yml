@@ -1,33 +1,39 @@
-name: BunTest
+name: PiTerminal
 options:
-  bundleIdPrefix: dev.bun
+  bundleIdPrefix: dev.pi
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "26.0"
 
 targets:
-  BunTest:
+  PiTerminal:
     type: application
     platform: iOS
     sources:
-      - path: PiTerminal/BunTest
+      - path: PiTerminal
         excludes:
-          - BridgingHeader.h
+          - "*/BridgingHeader.h"
     settings:
       base:
-        INFOPLIST_FILE: PiTerminal/BunTest/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: dev.bun.test
+        INFOPLIST_FILE: PiTerminal/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: dev.pi.terminal
         SWIFT_VERSION: "6.0"
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGNING_ALLOWED: "NO"
-        SWIFT_OBJC_BRIDGING_HEADER: PiTerminal/BunTest/BridgingHeader.h
+        SWIFT_OBJC_BRIDGING_HEADER: PiTerminal/BridgingHeader.h
+        SWIFT_INCLUDE_PATHS:
+          - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
         HEADER_SEARCH_PATHS:
           - "$(inherited)"
+          - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
           - "$(PROJECT_DIR)/../vendor/bun/include"
         LIBRARY_SEARCH_PATHS:
           - "$(inherited)"
+          - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator"
           - "$(PROJECT_DIR)/../vendor/bun/lib"
         OTHER_LDFLAGS:
+          # Ghostty
+          - "-lghostty-fat"
           # Bun static libraries
           - "-lbun"
           - "-lJavaScriptCore"
@@ -48,7 +54,7 @@ targets:
           - "-larchive"
           - "-lhdr_histogram_static"
           - "-lzstd"
-          # mimalloc object file
+          # mimalloc object
           - "$(PROJECT_DIR)/../vendor/bun/lib/mimalloc.o"
           # System libraries
           - "-licucore"

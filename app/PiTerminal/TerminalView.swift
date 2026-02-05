@@ -3,6 +3,9 @@ import GhosttyKit
 
 final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
     nonisolated(unsafe) private(set) var surface: ghostty_surface_t?
+    
+    /// Callback for keyboard input - set by the bridge
+    var onInput: ((String) -> Void)?
 
     var hasText: Bool { true }
 
@@ -47,15 +50,10 @@ final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
         ghostty_surface_set_content_scale(surface, scale, scale)
         updateSurfaceSize()
         becomeFirstResponder()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.writeOutput("\u{1b}[1;36mGhostty Terminal\u{1b}[0m on iOS\r\n\r\n$ ")
-        }
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        // Ghostty's IOSurfaceLayer sublayer needs to match our bounds
         if let sublayer = layer.sublayers?.first {
             sublayer.frame = layer.bounds
         }
@@ -91,6 +89,12 @@ final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
     // MARK: - UIKeyInput
 
     func insertText(_ text: String) {
+        // Send to callback if set (Bun bridge), otherwise just to terminal
+        if let onInput = onInput {
+            onInput(text)
+        }
+        
+        // Also send to terminal for local echo (optional - Bun might echo)
         guard let surface else { return }
         text.withCString { ptr in
             ghostty_surface_text(surface, ptr, UInt(strlen(ptr)))
@@ -98,6 +102,9 @@ final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
     }
 
     func deleteBackward() {
+        // Send backspace to callback
+        onInput?("\u{7f}")
+        
         guard let surface else { return }
         let bs: [CChar] = [0x7f, 0]
         bs.withUnsafeBufferPointer { buf in
