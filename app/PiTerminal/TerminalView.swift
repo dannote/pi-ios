@@ -1,19 +1,38 @@
 import UIKit
-import GhosttyKit
 
 final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
     nonisolated(unsafe) private(set) var surface: ghostty_surface_t?
     
     /// Callback for keyboard input - set by the bridge
     var onInput: ((String) -> Void)?
+    
+    /// Control key modifier state
+    private var controlKeyActive = false
+    
+    /// Cached key commands for hardware keyboard
+    private var _keyCommands: [UIKeyCommand]?
 
     var hasText: Bool { true }
 
     override var canBecomeFirstResponder: Bool { true }
+    
+    // MARK: - Keyboard Traits (disable smart features like iSH)
+    
+    var autocapitalizationType: UITextAutocapitalizationType { .none }
+    var autocorrectionType: UITextAutocorrectionType { .no }
+    var smartQuotesType: UITextSmartQuotesType { .no }
+    var smartDashesType: UITextSmartDashesType { .no }
+    var smartInsertDeleteType: UITextSmartInsertDeleteType { .no }
+    var spellCheckingType: UITextSpellCheckingType { .no }
+    var keyboardType: UIKeyboardType { .asciiCapable }
 
     init(app: ghostty_app_t) {
         super.init(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
         backgroundColor = .clear
+        
+        // Disable keyboard shortcuts bar
+        inputAssistantItem.leadingBarButtonGroups = []
+        inputAssistantItem.trailingBarButtonGroups = []
 
         var config = ghostty_surface_config_new()
         config.userdata = Unmanaged.passUnretained(self).toOpaque()
@@ -86,29 +105,139 @@ final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
         if !isFirstResponder { becomeFirstResponder() }
     }
 
-    // MARK: - UIKeyInput
+    // MARK: - UIKeyInput (Software Keyboard)
 
     func insertText(_ text: String) {
-        // Send to callback if set (Bun bridge), otherwise just to terminal
-        if let onInput = onInput {
-            onInput(text)
+        var processedText = text
+        
+        // Handle control key modifier
+        if controlKeyActive {
+            controlKeyActive = false
+            if text.count == 1, let char = text.first {
+                sendControlChar(char)
+                return
+            }
         }
         
-        // Also send to terminal for local echo (optional - Bun might echo)
-        guard let surface else { return }
-        text.withCString { ptr in
-            ghostty_surface_text(surface, ptr, UInt(strlen(ptr)))
-        }
+        // Replace newline with carriage return (Enter key)
+        processedText = processedText.replacingOccurrences(of: "\n", with: "\r")
+        
+        // Send to Bun - let Bun/readline handle echo
+        onInput?(processedText)
     }
 
     func deleteBackward() {
-        // Send backspace to callback
+        // Send DEL character (0x7F) - let Bun handle echo
         onInput?("\u{7f}")
+    }
+    
+    // MARK: - Control Characters
+    
+    private func sendControlChar(_ char: Character) {
+        let controlKeys = "abcdefghijklmnopqrstuvwxyz@^26-=[]\\ "
+        guard controlKeys.contains(char.lowercased()) else { return }
         
-        guard let surface else { return }
-        let bs: [CChar] = [0x7f, 0]
-        bs.withUnsafeBufferPointer { buf in
-            ghostty_surface_text(surface, buf.baseAddress, 1)
+        var ch = char.asciiValue ?? 0
+        if ch == UInt8(ascii: " ") { ch = 0 }
+        else if ch == UInt8(ascii: "2") { ch = UInt8(ascii: "@") }
+        else if ch == UInt8(ascii: "6") { ch = UInt8(ascii: "^") }
+        
+        if ch != 0 {
+            ch = (ch & 0xDF) ^ 0x40
+        }
+        
+        let str = String(UnicodeScalar(ch))
+        onInput?(str)
+    }
+    
+    // MARK: - Hardware Keyboard (UIKeyCommand)
+    
+    override var keyCommands: [UIKeyCommand]? {
+        if let cached = _keyCommands { return cached }
+        
+        var commands: [UIKeyCommand] = []
+        
+        // Control+letter combinations
+        let controlKeys = "abcdefghijklmnopqrstuvwxyz@^26-=[]\\ "
+        for char in controlKeys {
+            let cmd = UIKeyCommand(
+                input: String(char),
+                modifierFlags: .control,
+                action: #selector(handleKeyCommand(_:))
+            )
+            cmd.wantsPriorityOverSystemBehavior = true
+            commands.append(cmd)
+        }
+        
+        // Arrow keys
+        for arrow in [UIKeyCommand.inputUpArrow, UIKeyCommand.inputDownArrow,
+                      UIKeyCommand.inputLeftArrow, UIKeyCommand.inputRightArrow] {
+            let cmd = UIKeyCommand(
+                input: arrow,
+                modifierFlags: [],
+                action: #selector(handleKeyCommand(_:))
+            )
+            cmd.wantsPriorityOverSystemBehavior = true
+            commands.append(cmd)
+        }
+        
+        // Escape
+        let esc = UIKeyCommand(
+            input: UIKeyCommand.inputEscape,
+            modifierFlags: [],
+            action: #selector(handleKeyCommand(_:))
+        )
+        esc.wantsPriorityOverSystemBehavior = true
+        commands.append(esc)
+        
+        // Tab
+        let tab = UIKeyCommand(
+            input: "\t",
+            modifierFlags: [],
+            action: #selector(handleKeyCommand(_:))
+        )
+        tab.wantsPriorityOverSystemBehavior = true
+        commands.append(tab)
+        
+        // Option+key for ESC prefix (Meta key)
+        let metaKeys = "abcdefghijklmnopqrstuvwxyz0123456789-=[]\\;',./"
+        for char in metaKeys {
+            let cmd = UIKeyCommand(
+                input: String(char),
+                modifierFlags: .alternate,
+                action: #selector(handleKeyCommand(_:))
+            )
+            commands.append(cmd)
+        }
+        
+        _keyCommands = commands
+        return commands
+    }
+    
+    @objc private func handleKeyCommand(_ command: UIKeyCommand) {
+        guard let key = command.input else { return }
+        
+        if command.modifierFlags.isEmpty {
+            switch key {
+            case UIKeyCommand.inputEscape:
+                onInput?("\u{1b}")
+            case UIKeyCommand.inputUpArrow:
+                onInput?("\u{1b}[A")
+            case UIKeyCommand.inputDownArrow:
+                onInput?("\u{1b}[B")
+            case UIKeyCommand.inputRightArrow:
+                onInput?("\u{1b}[C")
+            case UIKeyCommand.inputLeftArrow:
+                onInput?("\u{1b}[D")
+            default:
+                onInput?(key)
+            }
+        } else if command.modifierFlags.contains(.alternate) {
+            onInput?("\u{1b}" + key)
+        } else if command.modifierFlags.contains(.control) {
+            if let char = key.first {
+                sendControlChar(char)
+            }
         }
     }
 }

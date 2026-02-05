@@ -6,11 +6,15 @@ struct TerminalContentView: View {
     
     var body: some View {
         ZStack {
-            Color.black.edgesIgnoringSafeArea(.all)
+            Color(red: 0.157, green: 0.173, blue: 0.204)
+                .ignoresSafeArea()
             
             if let app = ghosttyManager.app {
-                TerminalViewRepresentable(app: app, bridge: bunBridge)
-                    .edgesIgnoringSafeArea(.all)
+                VStack(spacing: 0) {
+                    Spacer().frame(height: 0)
+                    TerminalViewRepresentable(app: app, bridge: bunBridge)
+                }
+                .padding(.top, 1) // Force safe area respect
             } else {
                 Text("Initializing...")
                     .foregroundColor(.white)
