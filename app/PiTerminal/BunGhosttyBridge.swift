@@ -42,7 +42,6 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         stdoutReadFd = stdoutPipe[0]
         isRunning = true
         
-        // Start reading thread
         let readFd = stdoutReadFd
         Thread { [weak self] in
             var buffer = [CChar](repeating: 0, count: 4096)
@@ -60,31 +59,25 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
             }
         }.start()
         
-        // Print welcome message directly to terminal
-        terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")  // Clear screen
+        terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
         terminalView?.writeOutput("\u{1b}[1;36mPi Terminal\u{1b}[0m — Bun 1.3.9 on iOS\r\n")
         terminalView?.writeOutput("Type JavaScript expressions or 'exit' to quit\r\n\r\n")
         
-        // Simple REPL without readline (manual echo and line buffering)
+        // Simple REPL only - no async startup
         var args = ["/tmp", "-e", """
             let line = '';
             process.stdout.write('> ');
-            process.stdin.setRawMode?.(false); // Ensure cooked mode
             process.stdin.on('data', (chunk) => {
                 const str = chunk.toString();
                 for (const ch of str) {
                     if (ch === '\\r' || ch === '\\n') {
                         process.stdout.write('\\r\\n');
                         const trimmed = line.trim();
-                        if (trimmed === 'exit' || trimmed === 'quit') {
-                            process.exit(0);
-                        }
+                        if (trimmed === 'exit') process.exit(0);
                         if (trimmed) {
                             try {
                                 const result = eval(trimmed);
-                                if (result !== undefined) {
-                                    console.log(result);
-                                }
+                                if (result !== undefined) console.log(result);
                             } catch (e) {
                                 console.error('\\x1b[31m' + e.message + '\\x1b[0m');
                             }
@@ -92,7 +85,6 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
                         line = '';
                         process.stdout.write('> ');
                     } else if (ch === '\\x7f' || ch === '\\b') {
-                        // Backspace
                         if (line.length > 0) {
                             line = line.slice(0, -1);
                             process.stdout.write('\\b \\b');
@@ -131,7 +123,7 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         close(stdinPipe[0])
         close(stdoutPipe[1])
         
-        os_log("Bun REPL started", log: log, type: .default)
+        os_log("Bun started", log: log, type: .default)
     }
     
     func sendInput(_ text: String) {
