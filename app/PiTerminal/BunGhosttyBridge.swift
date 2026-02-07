@@ -60,41 +60,26 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         }.start()
         
         terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
-        terminalView?.writeOutput("\u{1b}[1;36mPi Terminal\u{1b}[0m — Bun 1.3.9 on iOS\r\n")
-        terminalView?.writeOutput("Type JavaScript expressions or 'exit' to quit\r\n\r\n")
+        terminalView?.writeOutput("\u{1b}[1;36mPi Terminal\u{1b}[0m\r\n\r\n")
         
-        // Simple REPL only - no async startup
+        // Direct fetch test - HTTPS
         var args = ["/tmp", "-e", """
-            let line = '';
-            process.stdout.write('> ');
-            process.stdin.on('data', (chunk) => {
-                const str = chunk.toString();
-                for (const ch of str) {
-                    if (ch === '\\r' || ch === '\\n') {
-                        process.stdout.write('\\r\\n');
-                        const trimmed = line.trim();
-                        if (trimmed === 'exit') process.exit(0);
-                        if (trimmed) {
-                            try {
-                                const result = eval(trimmed);
-                                if (result !== undefined) console.log(result);
-                            } catch (e) {
-                                console.error('\\x1b[31m' + e.message + '\\x1b[0m');
-                            }
-                        }
-                        line = '';
-                        process.stdout.write('> ');
-                    } else if (ch === '\\x7f' || ch === '\\b') {
-                        if (line.length > 0) {
-                            line = line.slice(0, -1);
-                            process.stdout.write('\\b \\b');
-                        }
-                    } else if (ch >= ' ') {
-                        line += ch;
-                        process.stdout.write(ch);
-                    }
-                }
-            });
+            console.log('Testing HTTPS fetch()...');
+            fetch('https://httpbin.org/get')
+                .then(r => {
+                    console.log('Status:', r.status);
+                    return r.json();
+                })
+                .then(d => {
+                    console.log('URL:', d.url);
+                    console.log('Host:', d.headers.Host);
+                    console.log('\\n✅ HTTPS fetch works!');
+                    process.exit(0);
+                })
+                .catch(e => {
+                    console.log('❌ Error:', e.message);
+                    process.exit(1);
+                });
             """]
         
         var cArgs: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) }

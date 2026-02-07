@@ -112,3 +112,27 @@ xcodebuild build -project PiTerminal.xcodeproj -scheme PiTerminal \
 - [ ] Add just-bash for shell commands
 - [ ] Integrate pi-agent
 - [ ] App Store submission
+
+## 2026-02-07: FETCH WORKS ON iOS! 🎉
+
+### Issue
+`fetch()` was crashing with "Parent loop not set - pointer is null" or "Parent loop data corrupted - tag is invalid" when called on iOS.
+
+### Root Cause
+The HTTP Client thread uses a separate uSockets loop, and the libinfo DNS resolution path requires accessing the parent event loop via `loop.internal_loop_data.getParent()`. On iOS, the HTTP thread's loop didn't have a properly configured parent event loop.
+
+### Fix
+Skip the libinfo DNS path on iOS and always use the work pool for DNS resolution. The work pool DNS doesn't require the parent event loop.
+
+```zig
+// In src/bun.js/api/bun/dns.zig
+if (comptime Environment.isDarwin and !Environment.isIOS) {
+    // libinfo DNS path - only on macOS
+}
+// Work pool DNS path - used on iOS and as fallback
+```
+
+### Verified Working
+- HTTP fetch (`http://httpbin.org/ip`) ✅
+- HTTPS fetch (`https://httpbin.org/get`) ✅
+- DNS resolution via work pool ✅
