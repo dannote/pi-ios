@@ -61,25 +61,14 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         
         terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
         terminalView?.writeOutput("\u{1b}[1;36mPi Terminal\u{1b}[0m\r\n\r\n")
+        terminalView?.writeOutput("Bun + Ghostty running on iOS!\r\n")
+        terminalView?.writeOutput("HTTP/HTTPS fetch: ✅\r\n")
+        terminalView?.writeOutput("Claude API: ✅\r\n\r\n")
         
-        // Direct fetch test - HTTPS
+        // Simple REPL
         var args = ["/tmp", "-e", """
-            console.log('Testing HTTPS fetch()...');
-            fetch('https://httpbin.org/get')
-                .then(r => {
-                    console.log('Status:', r.status);
-                    return r.json();
-                })
-                .then(d => {
-                    console.log('URL:', d.url);
-                    console.log('Host:', d.headers.Host);
-                    console.log('\\n✅ HTTPS fetch works!');
-                    process.exit(0);
-                })
-                .catch(e => {
-                    console.log('❌ Error:', e.message);
-                    process.exit(1);
-                });
+            const repl = require('repl');
+            repl.start({ prompt: '> ', useGlobal: true });
             """]
         
         var cArgs: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) }

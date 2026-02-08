@@ -136,3 +136,39 @@ if (comptime Environment.isDarwin and !Environment.isIOS) {
 - HTTP fetch (`http://httpbin.org/ip`) ✅
 - HTTPS fetch (`https://httpbin.org/get`) ✅
 - DNS resolution via work pool ✅
+
+## 2026-02-07: Claude API Works on iOS! 🎉
+
+### Verified
+- OpenRouter API with Claude 3.5 Haiku model
+- HTTPS POST with JSON body
+- Streaming would need testing but basic completions work
+
+### Test Result
+```
+Testing OpenRouter Claude API...
+Status: 200
+Model: anthropic/claude-3.5-haiku
+
+Response:
+Hello, greetings from iOS device!
+
+✅ Claude API works on iOS!
+```
+
+### Summary of Working Features
+- ✅ Bun runtime on iOS Simulator
+- ✅ JavaScript execution
+- ✅ Node.js APIs (dns, net, tls, fs, etc.)
+- ✅ HTTP fetch
+- ✅ HTTPS fetch  
+- ✅ DNS resolution (via work pool)
+- ✅ TLS/SSL connections
+- ✅ Claude API via OpenRouter
+- ✅ Ghostty terminal rendering
+- ✅ Keyboard input handling
+
+### Next Steps
+1. Create iOS tool implementations (just-bash for bash/grep/find)
+2. Bundle pi-agent for iOS
+3. Test on physical iOS device
