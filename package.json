@@ -10,6 +10,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@mariozechner/pi-agent-core": "^0.52.9",
+    "@mariozechner/pi-ai": "^0.52.9",
     "just-bash": "^2.9.6"
   }
 }

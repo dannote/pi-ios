@@ -237,3 +237,50 @@ All tools tested and working:
 1. Create pi-agent iOS adapter using these tools
 2. Bundle pi-agent core with iOS tools
 3. Test complete agent workflow on iOS
+
+## 2026-02-09: iOS Agent Module Created
+
+### Created
+- `lib/ios-agent.ts` — Full iOS agent implementation using pi-agent-core
+  - Uses OpenRouter API for Claude access
+  - Tool implementations using just-bash
+  - Streaming text support
+  - Tool call/result callbacks
+
+### Verified Locally
+- Agent creates and reads files ✅
+- Agent uses ls, read, grep tools ✅
+- Streaming text works ✅
+- OpenRouter API calls work ✅
+
+### Verified on iOS Simulator
+- Agent-style API call works ✅
+- System prompt + user message → Claude response ✅
+- Result: `print("Hello, World!")` for Python hello world request
+
+### Current Bundle Sizes
+- ios-tools.ts bundle: 2.69 MB (includes just-bash)
+- ios-agent.ts bundle: 7.36 MB (includes pi-agent-core, pi-ai, just-bash)
+
+### Architecture Summary
+```
+iOS App (Swift/UIKit)
+    └── Ghostty Terminal (Metal rendering)
+    └── Bun Runtime (embedded via libbun.a)
+        └── iOS Agent (TypeScript)
+            ├── pi-agent-core (Agent class)
+            ├── pi-ai (OpenRouter/Claude API)
+            └── iOS Tools (just-bash backed)
+                ├── bash
+                ├── grep
+                ├── find
+                ├── read
+                ├── write
+                └── ls
+```
+
+### Next Steps
+1. Fix bundle loading on iOS (dynamic import issue)
+2. Integrate full iOS Agent into app
+3. Add interactive REPL mode
+4. Test on physical iOS device
