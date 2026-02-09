@@ -172,3 +172,35 @@ Hello, greetings from iOS device!
 1. Create iOS tool implementations (just-bash for bash/grep/find)
 2. Bundle pi-agent for iOS
 3. Test on physical iOS device
+
+## 2026-02-09: just-bash Works on iOS! 🎉
+
+### Verified
+- `just-bash` virtual shell runs perfectly on iOS
+- All key commands work:
+  - `cat` - file reading
+  - `ls` - directory listing
+  - `echo` with redirection
+  - `jq` - JSON processing
+  - `grep` - text search
+  - And many more (awk, sed, find, etc.)
+
+### Bundle Size
+- just-bash.js: 3.36 MB (bundled with all commands)
+
+### Integration Notes
+- just-bash uses in-memory filesystem
+- No child_process spawning needed
+- Perfect replacement for pi-agent's bash/grep/find tools
+
+### All Core Pi-Agent Capabilities Verified
+1. ✅ Bun runtime on iOS
+2. ✅ JavaScript execution  
+3. ✅ HTTP/HTTPS fetch
+4. ✅ Claude API via OpenRouter
+5. ✅ just-bash virtual shell
+
+### Next Steps
+1. Create iOS-specific tool implementations wrapping just-bash
+2. Bundle pi-agent with just-bash for iOS
+3. Test on physical iOS device

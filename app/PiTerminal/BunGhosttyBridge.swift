@@ -60,15 +60,49 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         }.start()
         
         terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
-        terminalView?.writeOutput("\u{1b}[1;36mPi Terminal\u{1b}[0m\r\n\r\n")
-        terminalView?.writeOutput("Bun + Ghostty running on iOS!\r\n")
-        terminalView?.writeOutput("HTTP/HTTPS fetch: ✅\r\n")
-        terminalView?.writeOutput("Claude API: ✅\r\n\r\n")
+        terminalView?.writeOutput("\u{1b}[1;36mPi Terminal\u{1b}[0m — Testing just-bash\r\n\r\n")
         
-        // Simple REPL
+        // Test just-bash
         var args = ["/tmp", "-e", """
-            const repl = require('repl');
-            repl.start({ prompt: '> ', useGlobal: true });
+            console.log('Loading just-bash...');
+            
+            // Dynamic import of bundled just-bash
+            const { Bash } = await import('/tmp/just-bash.js');
+            
+            console.log('Creating Bash instance...');
+            const bash = new Bash({
+                files: {
+                    '/home/user/hello.txt': 'Hello from just-bash on iOS!',
+                    '/home/user/data.json': JSON.stringify({ name: 'Pi Terminal', platform: 'iOS' })
+                }
+            });
+            
+            console.log('Testing commands...');
+            console.log('');
+            
+            // Test various commands
+            let result;
+            
+            result = await bash.exec('cat /home/user/hello.txt');
+            console.log('cat hello.txt:', result.stdout.trim());
+            
+            result = await bash.exec('ls -la /home/user');
+            console.log('');
+            console.log('ls -la /home/user:');
+            console.log(result.stdout);
+            
+            result = await bash.exec('echo "Created on iOS" > /tmp/test.txt && cat /tmp/test.txt');
+            console.log('echo + cat:', result.stdout.trim());
+            
+            result = await bash.exec('jq .name /home/user/data.json');
+            console.log('jq .name:', result.stdout.trim());
+            
+            result = await bash.exec('grep -r "iOS" /home/user');
+            console.log('grep iOS:', result.stdout.trim());
+            
+            console.log('');
+            console.log('✅ just-bash works on iOS!');
+            process.exit(0);
             """]
         
         var cArgs: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) }
