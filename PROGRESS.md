@@ -204,3 +204,36 @@ Hello, greetings from iOS device!
 1. Create iOS-specific tool implementations wrapping just-bash
 2. Bundle pi-agent with just-bash for iOS
 3. Test on physical iOS device
+
+## 2026-02-09: iOS Tools Module Created and Verified
+
+### Created
+- `lib/ios-tools.ts` — iOS-specific tool implementations using just-bash
+  - `bashTool()` — Execute shell commands
+  - `grepTool()` — Search file contents
+  - `findTool()` — Find files by pattern
+  - `readTool()` — Read file contents
+  - `writeTool()` — Write file contents
+  - `lsTool()` — List directory contents
+  - `getFilesystem()` — Access just-bash instance directly
+  - `resetBash()` — Reset environment (for testing)
+
+### Verified on iOS Simulator
+All tools tested and working:
+- bash tool: ✅ ls -la output correct
+- grep tool: ✅ Found iOS references in files
+- find tool: ✅ Found *.ts files
+- read tool: ✅ Read file contents
+- write tool: ✅ Wrote and verified file
+- ls tool: ✅ Full directory listing
+
+### Architecture
+- Uses just-bash Bash singleton for persistent in-memory filesystem
+- No child_process spawning needed
+- Direct replacement for pi-agent's process-spawning tools
+- 2.69 MB bundle size (includes just-bash)
+
+### Next Steps
+1. Create pi-agent iOS adapter using these tools
+2. Bundle pi-agent core with iOS tools
+3. Test complete agent workflow on iOS

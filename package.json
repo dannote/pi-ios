@@ -1,0 +1,15 @@
+{
+  "name": "pi-terminal",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "^1.3.8"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "just-bash": "^2.9.6"
+  }
+}
