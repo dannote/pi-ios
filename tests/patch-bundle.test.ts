@@ -176,3 +176,29 @@ describe('atob polyfill', () => {
     expect(output).toContain('catch');
   });
 });
+
+describe('theme embedding', () => {
+  test('embeds themes when themesDir provided', () => {
+    // Create mock theme files
+    const themesDir = join(TEST_DIR, 'themes');
+    mkdirSync(themesDir, { recursive: true });
+    writeFileSync(join(themesDir, 'dark.json'), '{"name": "dark", "vars": {}}');
+    writeFileSync(join(themesDir, 'light.json'), '{"name": "light", "vars": {}}');
+    
+    const inputContent = `
+      function getBuiltinThemes() {
+        return BUILTIN_THEMES;
+      }
+    `;
+    writeFileSync(TEST_INPUT, inputContent);
+    
+    patchBundle(TEST_INPUT, TEST_OUTPUT, { columns: 45, rows: 50, themesDir });
+    
+    const output = readFileSync(TEST_OUTPUT, 'utf8');
+    
+    // Should have embedded themes
+    expect(output).toContain('__PI_BUILTIN_THEMES');
+    expect(output).toContain('"name": "dark"');
+    expect(output).toContain('"name": "light"');
+  });
+});
