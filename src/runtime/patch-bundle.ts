@@ -70,6 +70,38 @@ class PipeTerminal {
     this.write('\\x1b]0;' + title + '\\x07');
   }
 
+  // Cursor movement - CRITICAL for TUI rendering
+  moveBy(lines) {
+    if (lines > 0) {
+      // Move down
+      this.write('\\x1b[' + lines + 'B');
+    } else if (lines < 0) {
+      // Move up
+      this.write('\\x1b[' + (-lines) + 'A');
+    }
+    // lines === 0: no movement
+  }
+
+  // Clear operations - CRITICAL for TUI rendering
+  clearLine() {
+    this.write('\\x1b[K');
+  }
+
+  clearFromCursor() {
+    this.write('\\x1b[J');
+  }
+
+  clearScreen() {
+    this.write('\\x1b[2J\\x1b[H');
+  }
+
+  // Drain input - used when stopping
+  async drainInput(maxMs = 1000, idleMs = 50) {
+    // On iOS with pipes, we don't need to drain like on a real TTY
+    // Just wait a bit for any pending input
+    await new Promise(resolve => setTimeout(resolve, Math.min(100, idleMs)));
+  }
+
   // Additional methods that ProcessTerminal might have
   queryDeviceAttributes() {
     // No-op on iOS
