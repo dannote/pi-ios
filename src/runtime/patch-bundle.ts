@@ -110,8 +110,8 @@ globalThis.atob = function(str) {
 };
 `;
 
-export function patchBundle(inputPath: string, outputPath: string, options: { columns?: number; rows?: number } = {}): void {
-  const { columns = 45, rows = 50 } = options;
+export function patchBundle(inputPath: string, outputPath: string, options: { columns?: number; rows?: number; themesDir?: string } = {}): void {
+  const { columns = 45, rows = 50, themesDir } = options;
   
   console.log(`Reading bundle from ${inputPath}...`);
   let content = readFileSync(inputPath, 'utf8');
@@ -120,13 +120,33 @@ export function patchBundle(inputPath: string, outputPath: string, options: { co
   const matches = content.match(/new ProcessTerminal/g);
   console.log(`Found ${matches?.length || 0} ProcessTerminal instantiations`);
   
-  // Replace ProcessTerminal class definition with PipeTerminal
-  // The class is defined as: class ProcessTerminal { ... }
-  // We need to replace it while keeping the export
-  
   // Replace all "new ProcessTerminal" with "new PipeTerminal"
   content = content.replace(/new ProcessTerminal\b/g, 'new PipeTerminal');
   content = content.replace(/new ProcessTerminal2\b/g, 'new PipeTerminal');
+  
+  // Embed themes directly in the bundle to avoid filesystem dependencies
+  let themesPatch = '';
+  if (themesDir) {
+    try {
+      const darkTheme = readFileSync(join(themesDir, 'dark.json'), 'utf8');
+      const lightTheme = readFileSync(join(themesDir, 'light.json'), 'utf8');
+      themesPatch = `
+// Embedded themes for iOS - override getBuiltinThemes
+var __PI_BUILTIN_THEMES = {
+  dark: ${darkTheme},
+  light: ${lightTheme}
+};
+`;
+      // Replace the getBuiltinThemes function to return embedded themes
+      content = content.replace(
+        /function getBuiltinThemes\(\) \{[\s\S]*?return BUILTIN_THEMES;\s*\}/,
+        `function getBuiltinThemes() { return __PI_BUILTIN_THEMES; }`
+      );
+      console.log('Embedded themes patched');
+    } catch (e) {
+      console.log('Warning: Could not embed themes:', e);
+    }
+  }
   
   // Add terminal size config
   const sizeConfig = `
@@ -134,8 +154,8 @@ globalThis.__PI_TERMINAL_COLUMNS = ${columns};
 globalThis.__PI_TERMINAL_ROWS = ${rows};
 `;
   
-  // Prepend polyfill, PipeTerminal class, and size config
-  const patched = ATOB_POLYFILL + '\n' + sizeConfig + '\n' + PIPE_TERMINAL_CODE + '\n' + content;
+  // Prepend polyfill, PipeTerminal class, themes, and size config
+  const patched = ATOB_POLYFILL + '\n' + sizeConfig + '\n' + themesPatch + '\n' + PIPE_TERMINAL_CODE + '\n' + content;
   
   console.log(`Writing patched bundle to ${outputPath}...`);
   writeFileSync(outputPath, patched);
@@ -148,9 +168,13 @@ globalThis.__PI_TERMINAL_ROWS = ${rows};
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const inputPath = args[0] || join(import.meta.dir, '../../lib/test-pi-main.js');
-  const outputPath = args[1] || '/tmp/pi-ios-patched.js';
+  const outputPath = args[1] || join(import.meta.dir, '../../lib/pi-ios-bundle.js');
   const columns = parseInt(args[2] || '45');
-  const rows = parseInt(args[3] || '50');
+  const rows = parseInt(args[3] || '80');
   
-  patchBundle(inputPath, outputPath, { columns, rows });
+  // Default themes dir
+  const themesDir = process.env.THEMES_DIR || 
+    join(process.env.HOME || '', '.bun/install/global/node_modules/@mariozechner/pi-coding-agent/dist/modes/interactive/theme');
+  
+  patchBundle(inputPath, outputPath, { columns, rows, themesDir });
 }

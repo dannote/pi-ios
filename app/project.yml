@@ -13,6 +13,8 @@ targets:
       - path: PiTerminal
         excludes:
           - "*/BridgingHeader.h"
+    resources:
+      - path: PiTerminal/Resources
     settings:
       base:
         INFOPLIST_FILE: PiTerminal/Info.plist

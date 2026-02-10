@@ -67,8 +67,46 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
         terminalView?.writeOutput("\u{1b}[1;36mPi\u{1b}[0m — AI Coding Agent\r\n\r\n")
         
-        // Run the real pi agent bundle
-        var args = ["/tmp", "/tmp/ios-pi-runner.js"]
+        // Get bundle resources
+        guard let bundlePath = Bundle.main.path(forResource: "pi-ios-bundle", ofType: "js"),
+              let entryPath = Bundle.main.path(forResource: "ios-entry", ofType: "js") else {
+            os_log("Bundle resources not found", log: log, type: .error)
+            terminalView?.writeOutput("\u{1b}[31mBundle resources not found\u{1b}[0m\r\n")
+            return
+        }
+        
+        // Get Documents directory for working dir
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.path
+        
+        // Copy bundle to Documents if needed (bundle resources are read-only)
+        let targetBundlePath = (documentsDir as NSString).appendingPathComponent("pi-ios-bundle.js")
+        if !FileManager.default.fileExists(atPath: targetBundlePath) {
+            do {
+                try FileManager.default.copyItem(atPath: bundlePath, toPath: targetBundlePath)
+                os_log("Copied bundle to Documents", log: log, type: .default)
+            } catch {
+                os_log("Failed to copy bundle: %@", log: log, type: .error, error.localizedDescription)
+            }
+        }
+        
+        // Load API key from config.json in Documents
+        let configPath = (documentsDir as NSString).appendingPathComponent("config.json")
+        var apiKey = ""
+        if FileManager.default.fileExists(atPath: configPath),
+           let data = FileManager.default.contents(atPath: configPath),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let key = json["openrouter_api_key"] as? String {
+            apiKey = key
+            os_log("Loaded API key from config", log: log, type: .default)
+        } else {
+            os_log("No config.json found, API key not set", log: log, type: .default)
+        }
+        
+        setenv("OPENROUTER_API_KEY", apiKey, 1)
+        setenv("PI_DOCUMENTS_DIR", documentsDir, 1)
+        setenv("PI_MODEL", "anthropic/claude-3.5-haiku", 1)
+        
+        var args = [documentsDir, entryPath, documentsDir]
         
         var cArgs: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) }
         cArgs.append(nil)
