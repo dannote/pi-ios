@@ -49,7 +49,12 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
                 let n = read(readFd, &buffer, buffer.count - 1)
                 if n > 0 {
                     buffer[Int(n)] = 0
-                    let str = String(cString: buffer)
+                    var str = String(cString: buffer)
+                    // Convert lone \n to \r\n for proper terminal display
+                    // But don't double-convert \r\n
+                    str = str.replacingOccurrences(of: "\r\n", with: "\u{0000}\u{0001}")
+                    str = str.replacingOccurrences(of: "\n", with: "\r\n")
+                    str = str.replacingOccurrences(of: "\u{0000}\u{0001}", with: "\r\n")
                     DispatchQueue.main.async {
                         globalTerminalView?.writeOutput(str)
                     }
@@ -60,18 +65,10 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         }.start()
         
         terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
-        terminalView?.writeOutput("\u{1b}[1;36mPi Terminal\u{1b}[0m\r\n\r\n")
-        terminalView?.writeOutput("Bun + Ghostty + Claude on iOS!\r\n\r\n")
-        terminalView?.writeOutput("✅ HTTP/HTTPS fetch\r\n")
-        terminalView?.writeOutput("✅ Claude API via OpenRouter\r\n")
-        terminalView?.writeOutput("✅ just-bash virtual shell\r\n")
-        terminalView?.writeOutput("✅ Full agent with tool calling\r\n\r\n")
+        terminalView?.writeOutput("\u{1b}[1;36mPi\u{1b}[0m — AI Coding Agent\r\n\r\n")
         
-        // Interactive REPL
-        var args = ["/tmp", "-e", """
-            const repl = require('repl');
-            repl.start({ prompt: '> ', useGlobal: true });
-            """]
+        // Run the real pi agent bundle
+        var args = ["/tmp", "/tmp/ios-pi-runner.js"]
         
         var cArgs: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) }
         cArgs.append(nil)

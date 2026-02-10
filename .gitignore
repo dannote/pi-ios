@@ -1,4 +1,5 @@
 build/
+dist/
 *.xcodeproj/
 xcuserdata/
 DerivedData/
@@ -10,3 +11,10 @@ DerivedData/
 .DS_Store
 node_modules/
 vendor/
+
+# Large generated bundles (rebuild with `bun run bundle`)
+lib/*.js
+lib/pi-full-patched.js
+lib/test-pi-main.js
+lib/ios-pi-minimal.js
+lib/ios-pi-minimal-patched.js
