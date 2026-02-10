@@ -1,4 +1,7 @@
 import UIKit
+import os.log
+
+private let termLog = OSLog(subsystem: "dev.pi.terminal", category: "Terminal")
 
 final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
     nonisolated(unsafe) private(set) var surface: ghostty_surface_t?
@@ -93,6 +96,17 @@ final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
 
     func writeOutput(_ text: String) {
         guard let surface else { return }
+        
+        // Debug: log cursor movement sequences
+        if text.contains("\u{1b}[") && (text.contains("A") || text.contains("B")) {
+            let escaped = text.unicodeScalars.map { scalar -> String in
+                if scalar.value == 0x1b { return "^[" }
+                else if scalar.value < 32 { return "[\\x\(String(format: "%02x", scalar.value))]" }
+                else { return String(scalar) }
+            }.joined()
+            os_log("CURSOR: %{public}@", log: termLog, type: .default, String(escaped.prefix(300)))
+        }
+        
         text.withCString { ptr in
             ghostty_surface_write_output(surface, ptr, UInt(strlen(ptr)))
         }

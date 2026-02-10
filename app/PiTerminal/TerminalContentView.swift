@@ -30,7 +30,10 @@ struct TerminalViewRepresentable: UIViewRepresentable {
     func makeUIView(context: Context) -> TerminalView {
         let view = TerminalView(app: app)
         bridge.terminalView = view
-        bridge.start()
+        // Delay start to allow view layout to complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            bridge.start()
+        }
         return view
     }
     

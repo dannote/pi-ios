@@ -12,6 +12,7 @@ import { join } from 'path';
 
 const PIPE_TERMINAL_CODE = `
 // PipeTerminal for iOS - replaces ProcessTerminal
+// Uses ABSOLUTE cursor positioning because Ghostty iOS has issues with relative movements
 class PipeTerminal {
   constructor() {
     this._columns = globalThis.__PI_TERMINAL_COLUMNS || 45;
@@ -20,6 +21,9 @@ class PipeTerminal {
     this.resizeHandler = null;
     this._running = false;
     this._kittyProtocolActive = false;
+    // Track absolute cursor position (1-indexed as per ANSI standard)
+    this._cursorRow = 1;
+    this._cursorCol = 1;
   }
 
   get columns() { return this._columns; }
@@ -36,6 +40,9 @@ class PipeTerminal {
     this.inputHandler = onInput;
     this.resizeHandler = onResize;
     this._running = true;
+    // Reset cursor tracking on start
+    this._cursorRow = 1;
+    this._cursorCol = 1;
 
     process.stdin.setEncoding('utf8');
     process.stdin.on('data', (data) => {
@@ -54,7 +61,77 @@ class PipeTerminal {
   }
 
   write(data) {
+    // Track cursor position changes from the data being written
+    this._trackCursorFromOutput(data);
     process.stdout.write(data);
+  }
+
+  // Parse output to track cursor position
+  _trackCursorFromOutput(data) {
+    let i = 0;
+    while (i < data.length) {
+      const char = data[i];
+      
+      if (char === '\\x1b' && data[i + 1] === '[') {
+        // Parse CSI sequence
+        let j = i + 2;
+        let params = '';
+        while (j < data.length && /[0-9;]/.test(data[j])) {
+          params += data[j];
+          j++;
+        }
+        const cmd = data[j];
+        
+        if (cmd === 'H' || cmd === 'f') {
+          // Cursor position: ESC[row;colH or ESC[row;colf
+          const parts = params.split(';');
+          this._cursorRow = parseInt(parts[0]) || 1;
+          this._cursorCol = parseInt(parts[1]) || 1;
+        } else if (cmd === 'A') {
+          // Cursor up
+          const n = parseInt(params) || 1;
+          this._cursorRow = Math.max(1, this._cursorRow - n);
+        } else if (cmd === 'B') {
+          // Cursor down
+          const n = parseInt(params) || 1;
+          this._cursorRow = Math.min(this._rows, this._cursorRow + n);
+        } else if (cmd === 'C') {
+          // Cursor forward
+          const n = parseInt(params) || 1;
+          this._cursorCol = Math.min(this._columns, this._cursorCol + n);
+        } else if (cmd === 'D') {
+          // Cursor back
+          const n = parseInt(params) || 1;
+          this._cursorCol = Math.max(1, this._cursorCol - n);
+        } else if (cmd === 'G') {
+          // Cursor horizontal absolute
+          this._cursorCol = parseInt(params) || 1;
+        } else if (cmd === 'J' && params === '2') {
+          // Clear screen - cursor goes to 1,1
+          this._cursorRow = 1;
+          this._cursorCol = 1;
+        }
+        
+        i = j + 1;
+        continue;
+      }
+      
+      if (char === '\\r') {
+        this._cursorCol = 1;
+      } else if (char === '\\n') {
+        this._cursorRow++;
+        // Don't reset column on newline in raw mode
+      } else if (char >= ' ') {
+        // Printable character - advance column
+        this._cursorCol++;
+        if (this._cursorCol > this._columns) {
+          this._cursorCol = 1;
+          this._cursorRow++;
+        }
+      }
+      
+      i++;
+    }
   }
 
   hideCursor() {
@@ -66,23 +143,22 @@ class PipeTerminal {
   }
 
   setTitle(title) {
-    // Set terminal title via OSC escape sequence
     this.write('\\x1b]0;' + title + '\\x07');
   }
 
-  // Cursor movement - CRITICAL for TUI rendering
+  // Cursor movement - USE ABSOLUTE POSITIONING for Ghostty iOS compatibility
   moveBy(lines) {
-    if (lines > 0) {
-      // Move down
-      this.write('\\x1b[' + lines + 'B');
-    } else if (lines < 0) {
-      // Move up
-      this.write('\\x1b[' + (-lines) + 'A');
-    }
-    // lines === 0: no movement
+    if (lines === 0) return;
+    
+    // Calculate target row
+    const targetRow = Math.max(1, Math.min(this._rows, this._cursorRow + lines));
+    
+    // Use absolute positioning: ESC[row;1H
+    process.stdout.write('\\x1b[' + targetRow + ';1H');
+    this._cursorRow = targetRow;
+    this._cursorCol = 1;
   }
 
-  // Clear operations - CRITICAL for TUI rendering
   clearLine() {
     this.write('\\x1b[K');
   }
@@ -92,20 +168,16 @@ class PipeTerminal {
   }
 
   clearScreen() {
-    this.write('\\x1b[2J\\x1b[H');
+    process.stdout.write('\\x1b[2J\\x1b[H');
+    this._cursorRow = 1;
+    this._cursorCol = 1;
   }
 
-  // Drain input - used when stopping
   async drainInput(maxMs = 1000, idleMs = 50) {
-    // On iOS with pipes, we don't need to drain like on a real TTY
-    // Just wait a bit for any pending input
     await new Promise(resolve => setTimeout(resolve, Math.min(100, idleMs)));
   }
 
-  // Additional methods that ProcessTerminal might have
-  queryDeviceAttributes() {
-    // No-op on iOS
-  }
+  queryDeviceAttributes() {}
 
   enableAlternateScreen() {
     this.write('\\x1b[?1049h');

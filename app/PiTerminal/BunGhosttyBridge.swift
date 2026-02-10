@@ -50,11 +50,7 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
                 if n > 0 {
                     buffer[Int(n)] = 0
                     var str = String(cString: buffer)
-                    // Convert lone \n to \r\n for proper terminal display
-                    // But don't double-convert \r\n
-                    str = str.replacingOccurrences(of: "\r\n", with: "\u{0000}\u{0001}")
-                    str = str.replacingOccurrences(of: "\n", with: "\r\n")
-                    str = str.replacingOccurrences(of: "\u{0000}\u{0001}", with: "\r\n")
+                    // Pass output directly to Ghostty - let it handle line endings
                     DispatchQueue.main.async {
                         globalTerminalView?.writeOutput(str)
                     }
@@ -64,8 +60,8 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
             }
         }.start()
         
+        // Clear screen and home cursor - let TUI handle all rendering
         terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
-        terminalView?.writeOutput("\u{1b}[1;36mPi\u{1b}[0m — AI Coding Agent\r\n\r\n")
         
         // Get bundle resources
         guard let bundlePath = Bundle.main.path(forResource: "pi-ios-bundle", ofType: "js"),
@@ -89,11 +85,28 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
             }
         }
         
+        // Create dummy package.json (bundle reads it at import time)
+        let packageJsonPath = (documentsDir as NSString).appendingPathComponent("package.json")
+        if !FileManager.default.fileExists(atPath: packageJsonPath) {
+            let packageJson = """
+            {
+                "name": "pi-terminal-ios",
+                "version": "1.0.0",
+                "piConfig": {
+                    "name": "pi",
+                    "configDir": ".pi"
+                }
+            }
+            """
+            try? packageJson.write(toFile: packageJsonPath, atomically: true, encoding: .utf8)
+            os_log("Created package.json", log: log, type: .default)
+        }
+        
         // Load API key from config.json in Documents
-        let configPath = (documentsDir as NSString).appendingPathComponent("config.json")
+        let userConfigPath = (documentsDir as NSString).appendingPathComponent("config.json")
         var apiKey = ""
-        if FileManager.default.fileExists(atPath: configPath),
-           let data = FileManager.default.contents(atPath: configPath),
+        if FileManager.default.fileExists(atPath: userConfigPath),
+           let data = FileManager.default.contents(atPath: userConfigPath),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let key = json["openrouter_api_key"] as? String {
             apiKey = key
@@ -102,9 +115,36 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
             os_log("No config.json found, API key not set", log: log, type: .default)
         }
         
-        setenv("OPENROUTER_API_KEY", apiKey, 1)
-        setenv("PI_DOCUMENTS_DIR", documentsDir, 1)
-        setenv("PI_MODEL", "anthropic/claude-3.5-haiku", 1)
+        // Set agent dir to Documents to avoid loading skills from Mac's ~/.pi
+        let agentDir = (documentsDir as NSString).appendingPathComponent(".pi/agent")
+        try? FileManager.default.createDirectory(atPath: agentDir, withIntermediateDirectories: true)
+        
+        // Get terminal size from Ghostty
+        var termColumns = 80
+        var termRows = 24
+        if let surface = terminalView?.surface {
+            let size = ghostty_surface_size(surface)
+            termColumns = Int(size.columns)
+            termRows = Int(size.rows)
+            os_log("Terminal size: %d x %d", log: log, type: .default, size.columns, size.rows)
+        }
+        
+        // Write config file for JS to read (env vars don't work with bun_main_with_io)
+        let piConfig: [String: Any] = [
+            "openrouterApiKey": apiKey,
+            "documentsDir": documentsDir,
+            "model": "anthropic/claude-3.5-haiku",
+            "agentDir": agentDir,
+            "forceFullRender": true,
+            "terminalColumns": termColumns,
+            "terminalRows": termRows
+        ]
+        let piConfigPath = (documentsDir as NSString).appendingPathComponent("pi-config.json")
+        if let configData = try? JSONSerialization.data(withJSONObject: piConfig),
+           let configString = String(data: configData, encoding: .utf8) {
+            try? configString.write(toFile: piConfigPath, atomically: true, encoding: .utf8)
+            os_log("Wrote pi-config.json", log: log, type: .default)
+        }
         
         var args = [documentsDir, entryPath, documentsDir]
         
