@@ -284,3 +284,50 @@ iOS App (Swift/UIKit)
 2. Integrate full iOS Agent into app
 3. Add interactive REPL mode
 4. Test on physical iOS device
+
+## 2026-02-10: Full Pi Agent Working on iOS! 🎉🎉🎉
+
+### Major Breakthrough
+Successfully ran a complete AI coding agent on iOS with:
+- **Claude 3.5 Haiku** via OpenRouter API
+- **Tool execution** (bash, read) via just-bash
+- **Multi-turn conversation** with tool calling loop
+- **Real file system operations** in virtual filesystem
+
+### What Works
+1. Load just-bash via `await import('/tmp/just-bash.js')` ✅
+2. Execute bash commands (ls, cat, mkdir, echo) ✅
+3. Call Claude API with tool definitions ✅
+4. Parse and execute tool calls ✅
+5. Return tool results to Claude ✅
+6. Get final response ✅
+
+### Test Result
+```
+User: List files in /project and show main.ts content
+
+Claude: I'll help you list the files in the /project directory...
+[bash] {"command":"ls /project"} → src
+[bash] {"command":"ls /project/src"} → main.ts version.ts
+[read] {"path":"/project/src/main.ts"} → console.log(VERSION);
+
+The /project directory contains a src folder with two files...
+✅ Pi Agent completed on iOS!
+```
+
+### Architecture
+- **No bundling required** - inline code in Swift + just-bash via dynamic import
+- **just-bash.js (3.3MB)** loads successfully on iOS
+- **Larger bundles crash** due to JSC/atob issue (investigated: OpenAI SDK base64 decoding)
+
+### Key Finding
+Bundled agent code (7.4MB with pi-agent-core) crashes JSC on iOS, but:
+- just-bash alone loads fine
+- Direct fetch() to OpenRouter works
+- Solution: Inline the agent logic in Swift/JS without heavy SDK deps
+
+### Next Steps
+1. Externalize inline JS to a bundled file (without pi-ai SDK)
+2. Add interactive REPL mode
+3. Test on physical iOS device
+4. Package for App Store

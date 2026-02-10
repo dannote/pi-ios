@@ -61,10 +61,11 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         
         terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
         terminalView?.writeOutput("\u{1b}[1;36mPi Terminal\u{1b}[0m\r\n\r\n")
-        terminalView?.writeOutput("Bun + Ghostty running on iOS!\r\n")
-        terminalView?.writeOutput("HTTP/HTTPS fetch: ✅\r\n")
-        terminalView?.writeOutput("Claude API: ✅\r\n")
-        terminalView?.writeOutput("just-bash tools: ✅\r\n\r\n")
+        terminalView?.writeOutput("Bun + Ghostty + Claude on iOS!\r\n\r\n")
+        terminalView?.writeOutput("✅ HTTP/HTTPS fetch\r\n")
+        terminalView?.writeOutput("✅ Claude API via OpenRouter\r\n")
+        terminalView?.writeOutput("✅ just-bash virtual shell\r\n")
+        terminalView?.writeOutput("✅ Full agent with tool calling\r\n\r\n")
         
         // Interactive REPL
         var args = ["/tmp", "-e", """
