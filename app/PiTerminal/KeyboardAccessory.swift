@@ -31,7 +31,7 @@ struct KeyboardAccessoryBar: View {
   @ViewBuilder
   private var accessoryContent: some View {
     if #available(iOS 26.0, *) {
-      GlassEffectContainer(spacing: 8) {
+      GlassEffectContainer(spacing: 4) {
         accessoryButtons
       }
     } else {
@@ -40,7 +40,7 @@ struct KeyboardAccessoryBar: View {
   }
 
   private var accessoryButtons: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: 4) {
       // Left group: Tab, Control, Escape
       HStack(spacing: 4) {
         AccessoryKey(
