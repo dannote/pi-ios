@@ -2,7 +2,7 @@
 #import "ghostty.h"
 
 // Bun iOS embedding API
-#include "ios_api.h"
+#include "bun_ios.h"
 
 // POSIX
 #include <unistd.h>

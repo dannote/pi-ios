@@ -1,20 +1,34 @@
+# Build artifacts
 build/
 dist/
-*.xcodeproj/
-xcuserdata/
 DerivedData/
+*.xcodeproj/xcuserdata/
 *.o
 *.a
+
+# App bundles (built, not tracked)
 *.app
 *.ipa
-*.tar.gz
-.DS_Store
-node_modules/
-vendor/
 
-# Large generated bundles (rebuild with `bun run bundle`)
-lib/*.js
-lib/pi-full-patched.js
-lib/test-pi-main.js
-lib/ios-pi-minimal.js
-lib/ios-pi-minimal-patched.js
+# Xcode
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Dependencies (use submodules or scripts)
+node_modules/
+vendor/bun/
+vendor/ghostty/
+
+# Generated bundles (rebuild with scripts/bundle-pi.sh)
+app/PiTerminal/Resources/pi-ios-bundle.js
+
+# Temporary/backup files
+*.bak
+*.tmp
+*~
+
+# Generated Xcode project (use xcodegen)
+*.xcodeproj/project.pbxproj
+*.xcodeproj/project.xcworkspace/

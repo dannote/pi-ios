@@ -152,9 +152,9 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         cArgs.append(nil)
         
         let result = cArgs.withUnsafeMutableBufferPointer { buf in
-            bun_main_with_io(
+            bun_start(
                 Int32(args.count),
-                buf.baseAddress!,
+                UnsafeMutablePointer(mutating: buf.baseAddress!.withMemoryRebound(to: UnsafePointer<CChar>?.self, capacity: args.count + 1) { $0 }),
                 stdinPipe[0],
                 stdoutPipe[1],
                 stdoutPipe[1],

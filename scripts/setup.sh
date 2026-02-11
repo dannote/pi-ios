@@ -1,63 +1,59 @@
 #!/bin/bash
 set -euo pipefail
 
-# Clone and set up all dependencies for pi-terminal.
+# Set up dependencies for pi-terminal.
 # Run once after cloning the repo.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VENDOR="$ROOT/vendor"
-mkdir -p "$VENDOR"
-
-# Pinned commits (update these when upgrading)
-GHOSTTY_COMMIT="93f12b675c2088aa2376b036262ac0daccc0a313"
-WEBKIT_COMMIT="8ab210be702830c306bf8ab406370fc654c07208"
+DEV_DIR="${DEV_DIR:-$HOME/Development}"
 
 echo "=== Setting up pi-terminal dependencies ==="
 echo ""
 
-# --- Ghostty ---
-if [ ! -d "$VENDOR/ghostty" ]; then
-  echo "Cloning ghostty-org/ghostty..."
-  git clone --depth 1 https://github.com/ghostty-org/ghostty.git "$VENDOR/ghostty"
-  cd "$VENDOR/ghostty"
-  git fetch --depth 1 origin "$GHOSTTY_COMMIT"
-  git checkout "$GHOSTTY_COMMIT" 2>/dev/null || true
-
-  echo "Applying iOS Manual backend patch..."
-  git apply "$ROOT/poc/webkit-patches/ghostty-ios-manual-backend.patch"
-  echo "✓ Ghostty ready"
+# --- Ghostty (iOS fork) ---
+GHOSTTY_DIR="$DEV_DIR/ghostty"
+if [ ! -d "$GHOSTTY_DIR" ]; then
+    echo "Cloning dannote/ghostty (ios-manual-backend branch)..."
+    git clone -b ios-manual-backend git@github.com:dannote/ghostty.git "$GHOSTTY_DIR"
 else
-  echo "✓ Ghostty already cloned"
+    echo "✓ Ghostty already at $GHOSTTY_DIR"
 fi
 
-echo ""
-
-# --- oven-sh/WebKit (sparse — only JSCOnly sources) ---
-if [ ! -d "$VENDOR/WebKit" ]; then
-  echo "Cloning oven-sh/WebKit (sparse, JSCOnly only)..."
-  git clone --filter=blob:none --sparse --depth 1 \
-    https://github.com/oven-sh/WebKit.git "$VENDOR/WebKit"
-  cd "$VENDOR/WebKit"
-  git sparse-checkout set \
-    Source/JavaScriptCore \
-    Source/WTF \
-    Source/bmalloc \
-    Source/cmake \
-    Source/CMakeLists.txt
-  git fetch --depth 1 origin "$WEBKIT_COMMIT"
-  git checkout "$WEBKIT_COMMIT" 2>/dev/null || true
-
-  echo "Applying iOS build patches..."
-  git apply "$ROOT/poc/webkit-patches/ios-build-fixes.patch"
-  echo "✓ WebKit ready"
+# --- Bun (iOS fork) ---
+BUN_DIR="$DEV_DIR/bun"
+if [ ! -d "$BUN_DIR" ]; then
+    echo "Cloning dannote/bun (ios-port branch)..."
+    git clone -b ios-port git@github.com:dannote/bun.git "$BUN_DIR"
 else
-  echo "✓ WebKit already cloned"
+    echo "✓ Bun already at $BUN_DIR"
 fi
 
 echo ""
 echo "=== Setup complete ==="
 echo ""
 echo "Next steps:"
-echo "  1. Build JSC for iOS:   scripts/build-jsc-ios.sh"
-echo "  2. Build Ghostty for iOS: cd vendor/ghostty && zig build -Doptimize=ReleaseFast -Dtarget=aarch64-ios"
-echo "  3. Open app/project.yml in Xcode (or run xcodegen)"
+echo ""
+echo "1. Build Ghostty for iOS:"
+echo "   cd $GHOSTTY_DIR"
+echo "   zig build -Doptimize=ReleaseFast -Dtarget=aarch64-ios-simulator"
+echo "   mkdir -p $ROOT/vendor/ghostty"
+echo "   cp -r zig-out/lib/GhosttyKit.xcframework $ROOT/vendor/ghostty/"
+echo ""
+echo "2. Build Bun for iOS (requires pre-built WebKit):"
+echo "   cd $BUN_DIR"
+echo "   mkdir -p build/ios-release && cd build/ios-release"
+echo "   cmake ../.. -G Ninja \\"
+echo "     -DCMAKE_BUILD_TYPE=Release \\"
+echo "     -DCMAKE_TOOLCHAIN_FILE=../../cmake/toolchains/ios-simulator.cmake \\"
+echo "     -DWEBKIT_PATH=\$HOME/Development/bun/build/ios-webkit"
+echo "   ninja"
+echo ""
+echo "3. Package Bun libraries:"
+echo "   cd $ROOT"
+echo "   ./scripts/package-bun-ios.sh"
+echo ""
+echo "4. Bundle pi agent:"
+echo "   ./scripts/bundle-pi.sh"
+echo ""
+echo "5. Build iOS app:"
+echo "   cd app && xcodegen generate && open PiTerminal.xcodeproj"
