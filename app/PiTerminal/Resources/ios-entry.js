@@ -1,6 +1,5 @@
 // Pi Terminal iOS Entry Point
 const fs = require('fs');
-const path = require('path');
 
 // iOS JSC atob() polyfill
 if (typeof globalThis.atob !== 'function' || (() => { try { atob('YWE='); return false; } catch { return true; } })()) {
@@ -29,7 +28,7 @@ if (!docsDir) {
   process.exit(1);
 }
 
-// Read config
+// Read config FIRST - before importing bundle
 const configPath = docsDir + '/pi-config.json';
 let config;
 try {
@@ -41,13 +40,14 @@ try {
   process.exit(1);
 }
 
-// Set terminal dimensions on stdout BEFORE importing bundle
-if (config.terminalColumns) {
-  process.stdout.columns = config.terminalColumns;
-}
-if (config.terminalRows) {
-  process.stdout.rows = config.terminalRows;
-}
+// Set terminal dimensions BEFORE importing bundle!
+// PipeTerminal reads these at construction time
+globalThis.__PI_TERMINAL_COLUMNS = config.terminalColumns || 80;
+globalThis.__PI_TERMINAL_ROWS = config.terminalRows || 24;
+
+// Also set on stdout for any code that reads from there
+if (config.terminalColumns) process.stdout.columns = config.terminalColumns;
+if (config.terminalRows) process.stdout.rows = config.terminalRows;
 
 // Set environment from config
 if (config.openrouterApiKey) process.env.OPENROUTER_API_KEY = config.openrouterApiKey;
@@ -61,10 +61,6 @@ if (config.terminalRows) process.env.PI_TERMINAL_ROWS = String(config.terminalRo
 // Skip version check on iOS
 process.env.PI_SKIP_VERSION_CHECK = '1';
 
-// Set terminal dimensions for TUI (legacy globals)
-globalThis.__PI_TERMINAL_COLUMNS = config.terminalColumns || 80;
-globalThis.__PI_TERMINAL_ROWS = config.terminalRows || 24;
-
 // Use alternate screen mode
 process.stdout.write('\x1b[?1049h');
 
@@ -72,6 +68,7 @@ async function main() {
   const bundlePath = 'file://' + docsDir + '/pi-ios-bundle.js';
   
   try {
+    // Import bundle AFTER globals are set
     const pi = await import(bundlePath);
     const modelId = config.model || 'anthropic/claude-3.5-haiku';
     const model = pi.getModel('openrouter', modelId);

@@ -252,14 +252,9 @@ var __PI_BUILTIN_THEMES = {
     }
   }
   
-  // Add terminal size config
-  const sizeConfig = `
-globalThis.__PI_TERMINAL_COLUMNS = ${columns};
-globalThis.__PI_TERMINAL_ROWS = ${rows};
-`;
-  
-  // Prepend polyfill, PipeTerminal class, themes, and size config
-  const patched = ATOB_POLYFILL + '\n' + sizeConfig + '\n' + themesPatch + '\n' + PIPE_TERMINAL_CODE + '\n' + content;
+  // Prepend polyfill, PipeTerminal class, and themes
+  // Note: Terminal size globals are set by ios-entry.js BEFORE importing the bundle
+  const patched = ATOB_POLYFILL + '\n' + themesPatch + '\n' + PIPE_TERMINAL_CODE + '\n' + content;
   
   console.log(`Writing patched bundle to ${outputPath}...`);
   writeFileSync(outputPath, patched);
