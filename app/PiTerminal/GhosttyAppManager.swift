@@ -14,8 +14,12 @@ final class GhosttyAppManager: ObservableObject {
         }
 
         let config = ghostty_config_new()!
-        // Write a temporary config file with dark theme
-        let configContent = "background = 282c34\nforeground = abb2bf\n"
+        // Write a temporary config file with dark theme and smaller font
+        let configContent = """
+            background = 282c34
+            foreground = abb2bf
+            font-size = 10
+            """
         let tmpConfig = NSTemporaryDirectory() + "ghostty-config"
         try? configContent.write(toFile: tmpConfig, atomically: true, encoding: .utf8)
         tmpConfig.withCString { path in
