@@ -19,6 +19,9 @@ final class GhosttyAppManager: ObservableObject {
             background = 282c34
             foreground = abb2bf
             font-size = 10
+            window-padding-x = 0
+            window-padding-y = 0
+            window-padding-balance = true
             """
         let tmpConfig = NSTemporaryDirectory() + "ghostty-config"
         try? configContent.write(toFile: tmpConfig, atomically: true, encoding: .utf8)
