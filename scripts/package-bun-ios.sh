@@ -4,16 +4,26 @@ set -euo pipefail
 # Package Bun's iOS build artifacts for embedding in the iOS app.
 # Creates vendor/bun/ with static libraries and headers.
 
-BUN_BUILD="${BUN_BUILD:-$HOME/Development/bun/build/ios-release}"
-WEBKIT_LIBS="${WEBKIT_LIBS:-$HOME/Development/bun/build/ios-webkit/lib}"
-WEBKIT_HEADERS="${WEBKIT_HEADERS:-$HOME/Development/bun/build/ios-webkit/include}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-OUT_DIR="$SCRIPT_DIR/../vendor/bun"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Allow overriding paths via environment variables
+BUN_BUILD="${BUN_BUILD:-$ROOT/deps/bun/build/ios-release}"
+WEBKIT_LIBS="${WEBKIT_LIBS:-$ROOT/deps/bun/build/ios-webkit/lib}"
+
+OUT_DIR="$ROOT/vendor/bun"
+
+if [ ! -d "$BUN_BUILD" ]; then
+    echo "Error: Bun build not found at $BUN_BUILD"
+    echo "Either build Bun first, or set BUN_BUILD environment variable."
+    exit 1
+fi
 
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR/lib" "$OUT_DIR/include"
 
 echo "=== Packaging Bun for iOS ==="
+echo "Source: $BUN_BUILD"
 
 # Bun's compiled C++ objects + Zig object → libbun.a
 echo "Creating libbun.a..."
@@ -49,10 +59,19 @@ done
 cp "$BUN_BUILD/lolhtml/aarch64-apple-ios-sim/release/liblolhtml.a" "$OUT_DIR/lib/liblolhtml.a"
 
 # WebKit static libraries
-echo "Copying WebKit libraries..."
-cp "$WEBKIT_LIBS/libJavaScriptCore.a" "$OUT_DIR/lib/"
-cp "$WEBKIT_LIBS/libWTF.a" "$OUT_DIR/lib/"
-cp "$WEBKIT_LIBS/libbmalloc.a" "$OUT_DIR/lib/"
+if [ -d "$WEBKIT_LIBS" ]; then
+    echo "Copying WebKit libraries..."
+    cp "$WEBKIT_LIBS/libJavaScriptCore.a" "$OUT_DIR/lib/"
+    cp "$WEBKIT_LIBS/libWTF.a" "$OUT_DIR/lib/"
+    cp "$WEBKIT_LIBS/libbmalloc.a" "$OUT_DIR/lib/"
+else
+    echo "Warning: WebKit libs not found at $WEBKIT_LIBS"
+fi
+
+# Copy iOS embedding header
+if [ -f "$ROOT/deps/bun/src/ios/bun_ios.h" ]; then
+    cp "$ROOT/deps/bun/src/ios/bun_ios.h" "$OUT_DIR/include/"
+fi
 
 echo ""
 echo "=== Done ==="

@@ -2,33 +2,32 @@
 build/
 dist/
 DerivedData/
-*.xcodeproj/xcuserdata/
 *.o
 *.a
 
-# App bundles (built, not tracked)
+# App bundles
 *.app
 *.ipa
 
-# Xcode
-xcuserdata/
+# Xcode generated files
+*.xcodeproj/project.pbxproj
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
 
 # macOS
 .DS_Store
 
-# Dependencies (use submodules or scripts)
+# Dependencies (cloned by setup.sh)
+deps/
 node_modules/
-vendor/bun/
-vendor/ghostty/
 
-# Generated bundles (rebuild with scripts/bundle-pi.sh)
+# Vendor (built artifacts from package-bun-ios.sh)
+vendor/
+
+# Generated bundle (rebuild with scripts/bundle-pi.sh)
 app/PiTerminal/Resources/pi-ios-bundle.js
 
-# Temporary/backup files
+# Temporary files
 *.bak
 *.tmp
 *~
-
-# Generated Xcode project (use xcodegen)
-*.xcodeproj/project.pbxproj
-*.xcodeproj/project.xcworkspace/

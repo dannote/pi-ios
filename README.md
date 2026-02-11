@@ -43,57 +43,65 @@ This project depends on two forked repositories:
 ### Prerequisites
 
 - macOS 14+ with Xcode 16+
+- [Zig](https://ziglang.org/) 0.13+ (for Ghostty)
 - [Bun](https://bun.sh) (for build scripts)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+- CMake and Ninja (for Bun)
 
-### 1. Build Dependencies
-
-#### Ghostty
+### Quick Start
 
 ```bash
-git clone -b ios-manual-backend git@github.com:dannote/ghostty.git ~/Development/ghostty
-cd ~/Development/ghostty
+# Clone this repo
+git clone git@github.com:dannote/pi-terminal.git
+cd pi-terminal
 
-# Build for iOS Simulator
+# Clone and set up dependencies (into ./deps/)
+./scripts/setup.sh
+```
+
+### 1. Build Ghostty
+
+```bash
+cd deps/ghostty
 zig build -Doptimize=ReleaseFast -Dtarget=aarch64-ios-simulator
 
 # Copy framework to vendor/
-mkdir -p ~/Development/pi-terminal/vendor/ghostty
-cp -r zig-out/lib/GhosttyKit.xcframework ~/Development/pi-terminal/vendor/ghostty/
+mkdir -p ../../vendor/ghostty
+cp -r zig-out/lib/GhosttyKit.xcframework ../../vendor/ghostty/
+cd ../..
 ```
 
-#### Bun
+### 2. Build Bun
+
+Building Bun for iOS requires a pre-built WebKit. See the [Bun iOS port documentation](https://github.com/dannote/bun/tree/ios-port/src/ios) for details.
 
 ```bash
-git clone -b ios-port git@github.com:dannote/bun.git ~/Development/bun
-cd ~/Development/bun
+cd deps/bun
 
-# Build for iOS Simulator (requires pre-built WebKit)
+# Build for iOS Simulator
 mkdir -p build/ios-release && cd build/ios-release
 cmake ../.. -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_TOOLCHAIN_FILE=../../cmake/toolchains/ios-simulator.cmake \
-  -DWEBKIT_PATH=$HOME/Development/bun/build/ios-webkit
+  -DWEBKIT_PATH=$(pwd)/../ios-webkit
 
 ninja
+cd ../../../..
 
-# Package libraries
-cd ~/Development/pi-terminal
+# Package libraries into vendor/
 ./scripts/package-bun-ios.sh
 ```
 
-### 2. Bundle Pi Agent
+### 3. Bundle Pi Agent
 
 ```bash
-cd ~/Development/pi-terminal
-bun install
-bun run src/runtime/bundle-pi.ts
+./scripts/bundle-pi.sh
 ```
 
-### 3. Build iOS App
+### 4. Build iOS App
 
 ```bash
-cd ~/Development/pi-terminal/app
+cd app
 xcodegen generate
 open PiTerminal.xcodeproj
 ```
@@ -115,22 +123,26 @@ Create `config.json` in the app's Documents folder with your OpenRouter API key:
 ```
 pi-terminal/
 ├── app/
-│   └── PiTerminal/           # iOS app source
-│       ├── BunGhosttyBridge.swift   # Connects Bun ↔ Ghostty
-│       ├── TerminalView.swift       # UIView wrapping Ghostty surface
+│   ├── project.yml               # XcodeGen project definition
+│   └── PiTerminal/               # iOS app source
+│       ├── PiTerminalApp.swift
+│       ├── GhosttyAppManager.swift
+│       ├── BunGhosttyBridge.swift    # Connects Bun ↔ Ghostty
+│       ├── TerminalView.swift        # UIView wrapping Ghostty
+│       ├── TerminalContentView.swift
 │       └── Resources/
-│           ├── ios-entry.js         # Bun entry point
-│           └── pi-ios-bundle.js     # Generated pi agent bundle
+│           └── ios-entry.js          # Bun entry point
 ├── scripts/
-│   └── package-bun-ios.sh    # Extracts Bun libraries for linking
-├── src/
-│   └── runtime/
-│       ├── bundle-pi.ts      # Creates pi-ios-bundle.js
-│       └── patch-bundle.ts   # iOS-specific bundle patches
-└── vendor/                   # Built dependencies (gitignored)
+│   ├── setup.sh              # Clone dependencies
+│   ├── package-bun-ios.sh    # Package Bun libraries
+│   └── bundle-pi.sh          # Bundle pi agent
+├── deps/                     # Cloned dependencies (gitignored)
+│   ├── ghostty/
+│   └── bun/
+└── vendor/                   # Built artifacts (gitignored)
     ├── bun/
     │   ├── include/
-    │   └── lib/              # Static libraries
+    │   └── lib/
     └── ghostty/
         └── GhosttyKit.xcframework/
 ```
