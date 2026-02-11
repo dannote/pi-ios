@@ -1,19 +1,23 @@
 import SwiftUI
-import GhosttyKit
+import os.log
+
+private let log = OSLog(subsystem: "dev.pi.terminal", category: "Ghostty")
 
 final class GhosttyAppManager: ObservableObject {
     @Published private(set) var app: ghostty_app_t?
 
     init() {
-        // Initialize the ghostty runtime (allocators, logging, etc.)
         let argc = CommandLine.argc
         let argv = CommandLine.unsafeArgv
         guard ghostty_init(UInt(argc), argv) == 0 else {
-            print("ghostty_init failed")
+            os_log("ghostty_init failed", log: log, type: .error)
             return
         }
 
-        let config = ghostty_config_new()!
+        guard let config = ghostty_config_new() else {
+            os_log("ghostty_config_new failed", log: log, type: .error)
+            return
+        }
         // Write a temporary config file with dark theme and smaller font
         let configContent = """
             background = 282c34
@@ -47,7 +51,7 @@ final class GhosttyAppManager: ObservableObject {
         )
 
         guard let app = ghostty_app_new(&runtimeCfg, config) else {
-            print("Failed to create ghostty app")
+            os_log("ghostty_app_new failed", log: log, type: .error)
             return
         }
 
