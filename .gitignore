@@ -31,3 +31,4 @@ build/
 
 # Dependencies (downloaded separately)
 deps/
+app/Pi/Resources/pi-ios-bundle.js
