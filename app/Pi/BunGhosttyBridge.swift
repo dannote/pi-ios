@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let log = OSLog(subsystem: "dev.pi.terminal", category: "Bridge")
+private let log = OSLog(subsystem: "dev.pi.ios", category: "Bridge")
 
 nonisolated(unsafe) private var globalTerminalView: TerminalView?
 
@@ -43,13 +43,15 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
     isRunning = true
 
     let readFd = stdoutReadFd
+    
+    
     Thread { [weak self] in
       var buffer = [CChar](repeating: 0, count: 4096)
       while self?.isRunning == true {
         let n = read(readFd, &buffer, buffer.count - 1)
         if n > 0 {
           buffer[Int(n)] = 0
-          var str = String(cString: buffer)
+          let str = String(cString: buffer)
           // Pass output directly to Ghostty - let it handle line endings
           DispatchQueue.main.async {
             globalTerminalView?.writeOutput(str)
@@ -59,7 +61,7 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
         }
       }
     }.start()
-
+    
     // Clear screen and home cursor - let TUI handle all rendering
     terminalView?.writeOutput("\u{1b}[2J\u{1b}[H")
 
@@ -148,8 +150,14 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
       os_log("Wrote pi-config.json", log: log, type: .default)
     }
 
+    // Set HOME to Documents directory - iOS doesn't have a traditional home dir
+    setenv("HOME", documentsDir, 1)
+    
     // Suppress update notifications - we're embedded in an iOS app
     setenv("PI_SKIP_VERSION_CHECK", "1", 1)
+    
+    // Disable Gigacage - iOS doesn't allow large virtual memory allocations
+    setenv("GIGACAGE_ENABLED", "0", 1)
 
     var args = [documentsDir, entryPath, documentsDir]
 
@@ -179,8 +187,11 @@ final class BunGhosttyBridge: ObservableObject, @unchecked Sendable {
       return
     }
 
-    close(stdinPipe[0])
-    close(stdoutPipe[1])
+    // DON'T close pipe ends here - bun_start is async and the bun thread
+    // needs these fds to be open when it does dup2. The bun thread will close
+    // the original fds after dup2.
+    // close(stdinPipe[0])
+    // close(stdoutPipe[1])
 
     os_log("Bun started", log: log, type: .default)
   }

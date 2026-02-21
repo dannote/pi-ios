@@ -1,33 +1,33 @@
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Vendor - large binary files
+vendor/
+
 # Build artifacts
 build/
-dist/
-DerivedData/
-*.o
-*.a
-
-# App bundles
-*.app
-*.ipa
-
-# Xcode generated files
-*.xcodeproj/project.pbxproj
-*.xcodeproj/project.xcworkspace/
-*.xcodeproj/xcuserdata/
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
-# Dependencies (cloned by setup.sh)
-deps/
-node_modules/
-
-# Vendor (built artifacts from package-bun-ios.sh)
-vendor/
-
-# Generated bundle (rebuild with scripts/bundle-pi.sh)
-app/PiTerminal/Resources/pi-ios-bundle.js
+# IDE
+.idea/
+*.swp
+*.swo
+*~
 
 # Temporary files
-*.bak
+*.log
 *.tmp
-*~
+
+# Dependencies (downloaded separately)
+deps/

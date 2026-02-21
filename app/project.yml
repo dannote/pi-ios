@@ -1,4 +1,4 @@
-name: PiTerminal
+name: Pi
 options:
   bundleIdPrefix: dev.pi
   deploymentTarget:
@@ -6,37 +6,29 @@ options:
   xcodeVersion: "26.0"
 
 targets:
-  PiTerminal:
+  Pi:
     type: application
     platform: iOS
     sources:
-      - path: PiTerminal
+      - path: Pi
         excludes:
           - "*/BridgingHeader.h"
     resources:
-      - path: PiTerminal/Resources
+      - path: Pi/Resources
+      - path: Pi/Assets.xcassets
     settings:
       base:
-        INFOPLIST_FILE: PiTerminal/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: dev.pi.terminal
+        INFOPLIST_FILE: Pi/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.dannote.pi
+        PRODUCT_NAME: Pi
         SWIFT_VERSION: "6.0"
-        CODE_SIGN_IDENTITY: "-"
-        CODE_SIGNING_ALLOWED: "NO"
-        SWIFT_OBJC_BRIDGING_HEADER: PiTerminal/BridgingHeader.h
-        SWIFT_INCLUDE_PATHS:
-          - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
-        HEADER_SEARCH_PATHS:
-          - "$(inherited)"
-          - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
-          - "$(PROJECT_DIR)/../vendor/bun/include"
-        LIBRARY_SEARCH_PATHS:
-          - "$(inherited)"
-          - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator"
-          - "$(PROJECT_DIR)/../vendor/bun/lib"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: N7D7M3Q3CD
+        SWIFT_OBJC_BRIDGING_HEADER: Pi/BridgingHeader.h
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
         OTHER_LDFLAGS:
-          # Ghostty
           - "-lghostty-fat"
-          # Bun static libraries
           - "-lbun"
           - "-lJavaScriptCore"
           - "-lWTF"
@@ -56,14 +48,11 @@ targets:
           - "-larchive"
           - "-lhdr_histogram_static"
           - "-lzstd"
-          # mimalloc object
-          - "$(PROJECT_DIR)/../vendor/bun/lib/mimalloc.o"
-          # System libraries
+          - "$(CUSTOM_MIMALLOC)"
           - "-licucore"
           - "-lresolv"
           - "-lc++"
           - "-lobjc"
-          # Frameworks
           - "-framework Metal"
           - "-framework CoreText"
           - "-framework CoreGraphics"
@@ -74,3 +63,28 @@ targets:
           - "-framework CoreVideo"
           - "-framework UIKit"
           - "-framework Security"
+      configs:
+        Debug:
+          SWIFT_INCLUDE_PATHS:
+            - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
+          HEADER_SEARCH_PATHS:
+            - "$(inherited)"
+            - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator/Headers"
+            - "$(PROJECT_DIR)/../vendor/bun/include"
+          LIBRARY_SEARCH_PATHS:
+            - "$(inherited)"
+            - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64-simulator"
+            - "$(PROJECT_DIR)/../vendor/bun/lib"
+          CUSTOM_MIMALLOC: "$(PROJECT_DIR)/../vendor/bun/lib/mimalloc.o"
+        Release:
+          SWIFT_INCLUDE_PATHS:
+            - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64/Headers"
+          HEADER_SEARCH_PATHS:
+            - "$(inherited)"
+            - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64/Headers"
+            - "$(PROJECT_DIR)/../vendor/bun-device/include"
+          LIBRARY_SEARCH_PATHS:
+            - "$(inherited)"
+            - "$(PROJECT_DIR)/../vendor/ghostty/GhosttyKit.xcframework/ios-arm64"
+            - "$(PROJECT_DIR)/../vendor/bun-device/lib"
+          CUSTOM_MIMALLOC: "$(PROJECT_DIR)/../vendor/bun-device/lib/mimalloc.o"

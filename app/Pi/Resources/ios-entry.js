@@ -40,12 +40,9 @@ try {
   process.exit(1);
 }
 
-// Set terminal dimensions BEFORE importing bundle!
-// PipeTerminal reads these at construction time
+// Set terminal dimensions BEFORE importing bundle
 globalThis.__PI_TERMINAL_COLUMNS = config.terminalColumns || 80;
 globalThis.__PI_TERMINAL_ROWS = config.terminalRows || 24;
-
-// Also set on stdout for any code that reads from there
 if (config.terminalColumns) process.stdout.columns = config.terminalColumns;
 if (config.terminalRows) process.stdout.rows = config.terminalRows;
 
@@ -68,7 +65,6 @@ async function main() {
   const bundlePath = 'file://' + docsDir + '/pi-ios-bundle.js';
   
   try {
-    // Import bundle AFTER globals are set
     const pi = await import(bundlePath);
     const modelId = config.model || 'anthropic/claude-3.5-haiku';
     const model = pi.getModel('openrouter', modelId);
@@ -91,11 +87,9 @@ async function main() {
   } catch (error) {
     process.stdout.write(`\x1b[31mError: ${error.message}\x1b[0m\r\n`);
     if (error.stack) process.stdout.write(error.stack.replace(/\n/g, '\r\n') + '\r\n');
-    process.exit(1);
   }
 }
 
 main().catch(err => {
   process.stdout.write(`\x1b[31mFatal: ${err}\x1b[0m\r\n`);
-  process.exit(1);
 });

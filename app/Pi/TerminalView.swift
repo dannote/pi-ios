@@ -88,7 +88,11 @@ final class TerminalView: UIView, UIKeyInput, @unchecked Sendable {
     let scale = window!.screen.scale
     ghostty_surface_set_content_scale(surface, scale, scale)
     updateSurfaceSize()
-    becomeFirstResponder()
+    
+    // Delay to ensure view is fully ready
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+      self?.becomeFirstResponder()
+    }
   }
 
   override func layoutSubviews() {

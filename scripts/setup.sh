@@ -1,63 +1,52 @@
 #!/bin/bash
-set -euo pipefail
+# Pi for iOS - Setup Script
+# Downloads pre-built vendor libraries or builds from source
 
-# Set up dependencies for pi-terminal.
-# Run once after cloning the repo.
+set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-DEPS_DIR="${DEPS_DIR:-$ROOT/deps}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VENDOR_DIR="$PROJECT_DIR/vendor"
 
-echo "=== Setting up pi-terminal dependencies ==="
-echo "Dependencies will be cloned to: $DEPS_DIR"
-echo ""
+echo "Pi for iOS - Setup"
+echo "=================="
 
-mkdir -p "$DEPS_DIR"
-
-# --- Ghostty (iOS fork) ---
-GHOSTTY_DIR="$DEPS_DIR/ghostty"
-if [ ! -d "$GHOSTTY_DIR" ]; then
-    echo "Cloning dannote/ghostty (ios-manual-backend branch)..."
-    git clone -b ios-manual-backend git@github.com:dannote/ghostty.git "$GHOSTTY_DIR"
-else
-    echo "✓ Ghostty already at $GHOSTTY_DIR"
+# Check if vendor already exists
+if [ -d "$VENDOR_DIR/ghostty" ] && [ -d "$VENDOR_DIR/bun-device" ]; then
+    echo "Vendor libraries already exist."
+    echo "Remove vendor/ to re-download."
+    exit 0
 fi
 
-# --- Bun (iOS fork) ---
-BUN_DIR="$DEPS_DIR/bun"
-if [ ! -d "$BUN_DIR" ]; then
-    echo "Cloning dannote/bun (ios-port branch)..."
-    git clone -b ios-port git@github.com:dannote/bun.git "$BUN_DIR"
-else
-    echo "✓ Bun already at $BUN_DIR"
-fi
+mkdir -p "$VENDOR_DIR"
 
 echo ""
-echo "=== Setup complete ==="
+echo "Vendor libraries are required to build Pi."
 echo ""
-echo "Next steps:"
+echo "Options:"
+echo "  1. Download pre-built binaries from GitHub Releases (recommended)"
+echo "  2. Build from source (requires ~2 hours)"
 echo ""
-echo "1. Build Ghostty for iOS:"
-echo "   cd $GHOSTTY_DIR"
-echo "   zig build -Doptimize=ReleaseFast -Dtarget=aarch64-ios-simulator"
-echo "   mkdir -p $ROOT/vendor/ghostty"
-echo "   cp -r zig-out/lib/GhosttyKit.xcframework $ROOT/vendor/ghostty/"
-echo ""
-echo "2. Build Bun for iOS (requires pre-built WebKit - see Bun iOS docs):"
-echo "   cd $BUN_DIR"
-echo "   mkdir -p build/ios-release && cd build/ios-release"
-echo "   cmake ../.. -G Ninja \\"
-echo "     -DCMAKE_BUILD_TYPE=Release \\"
-echo "     -DCMAKE_TOOLCHAIN_FILE=../../cmake/toolchains/ios-simulator.cmake \\"
-echo "     -DWEBKIT_PATH=\$BUN_DIR/build/ios-webkit"
-echo "   ninja"
-echo ""
-echo "3. Package Bun libraries:"
-echo "   cd $ROOT"
-echo "   BUN_BUILD=$BUN_DIR/build/ios-release ./scripts/package-bun-ios.sh"
-echo ""
-echo "4. Bundle pi agent:"
-echo "   ./scripts/bundle-pi.sh"
-echo ""
-echo "5. Build iOS app:"
-echo "   cd app && xcodegen generate && open PiTerminal.xcodeproj"
+
+read -p "Choose option [1/2]: " choice
+
+case $choice in
+    1)
+        echo "Downloading pre-built binaries..."
+        echo "Visit: https://github.com/dannote/pi-ios/releases"
+        echo "Download vendor-libs.tar.gz and run:"
+        echo "  tar -xzf vendor-libs.tar.gz -C vendor/"
+        ;;
+    2)
+        echo "Building from source..."
+        echo "This will take approximately 2 hours."
+        read -p "Continue? [y/N]: " confirm
+        if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+            "$SCRIPT_DIR/build-deps.sh"
+        fi
+        ;;
+    *)
+        echo "Invalid option"
+        exit 1
+        ;;
+esac
