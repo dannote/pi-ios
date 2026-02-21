@@ -38,13 +38,22 @@ Run the [Pi coding agent](https://github.com/mariozechner/pi-coding-agent) nativ
    
    Or build from source (see [Building Dependencies](#building-dependencies)).
 
-3. **Generate Xcode project**
+3. **Generate Pi bundle**
+   
+   The Pi agent JavaScript bundle is not included in the repo. Generate it:
+   ```bash
+   cd /path/to/pi-coding-agent
+   bun run build:ios
+   cp dist/pi-ios-bundle.js /path/to/pi-ios/app/Pi/Resources/
+   ```
+
+4. **Generate Xcode project**
    ```bash
    cd app
    xcodegen generate
    ```
 
-4. **Open in Xcode and build**
+5. **Open in Xcode and build**
    ```bash
    open Pi.xcodeproj
    ```
@@ -61,7 +70,7 @@ echo '{"openrouter_api_key": "sk-or-v1-your-key-here"}' > /tmp/config.json
 xcrun devicectl device copy to \
   --device YOUR_DEVICE_UDID \
   --domain-type appDataContainer \
-  --domain-identifier dev.pi.ios \
+  --domain-identifier com.dannote.pi \
   --source /tmp/config.json \
   --destination Documents/config.json
 ```
